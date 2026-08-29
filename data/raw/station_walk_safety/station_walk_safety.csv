@@ -1,0 +1,162 @@
+code,line_group,station,serves_lines,street_lights,people_nearby,safe_crossing,bushes_nearby,fenced,area_context,source,verified_date
+KJ01,Kelana Jaya,GOMBAK,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ02,Kelana Jaya,TAMAN MELATI,KJ,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ03,Kelana Jaya,WANGSA MAJU,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ04,Kelana Jaya,SRI RAMPAI,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ05,Kelana Jaya,SETIAWANGSA,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ06,Kelana Jaya,JELATEK,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ07,Kelana Jaya,DATO' KERAMAT,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ08,Kelana Jaya,DAMAI,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ09,Kelana Jaya,AMPANG PARK,KJ-PYL,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ10,Kelana Jaya,KLCC,KJ,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ11,Kelana Jaya,KAMPUNG BARU,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ12,Kelana Jaya,DANG WANGI,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ13,Kelana Jaya,MASJID JAMEK,AG-KJ-PH,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ14,Kelana Jaya,PASAR SENI,KGL-KJ,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ15,Kelana Jaya,KL SENTRAL,KJ-MR,yes,yes,yes,no,yes,100-200m around station,Maps,9/8/2026
+KJ16,Kelana Jaya,BANGSAR,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ17,Kelana Jaya,ABDULLAH HUKUM,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ18,Kelana Jaya,KERINCHI,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ19,Kelana Jaya,UNIVERSITI,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ20,Kelana Jaya,TAMAN JAYA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ21,Kelana Jaya,ASIA JAYA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ22,Kelana Jaya,TAMAN PARAMOUNT,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ23,Kelana Jaya,TAMAN BAHAGIA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ24,Kelana Jaya,KELANA JAYA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ25,Kelana Jaya,LEMBAH SUBANG,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ26,Kelana Jaya,ARA DAMANSARA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ27,Kelana Jaya,GLENMARIE,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ28,Kelana Jaya,SUBANG JAYA,KJ,yes,yes,no,no,no,100-200m around station,Maps,9/8/2026
+KJ29,Kelana Jaya,SS 15,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ30,Kelana Jaya,SS 18,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ31,Kelana Jaya,USJ 7,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ32,Kelana Jaya,TAIPAN,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ33,Kelana Jaya,WAWASAN,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ34,Kelana Jaya,USJ 21,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ35,Kelana Jaya,ALAM MEGAH,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ36,Kelana Jaya,SUBANG ALAM,KJ,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+KJ37,Kelana Jaya,PUTRA HEIGHTS,KJ-PH,yes,yes,yes,no,no,100-200m around station,Maps,9/8/2026
+AG01,Ampang,SENTUL TIMUR,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG02,Ampang,SENTUL,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG03,Ampang,TITIWANGSA,AG-MR-PH-PYL,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG04,Ampang,PWTC,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG05,Ampang,SULTAN ISMAIL,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG06,Ampang,BANDARAYA,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG08,Ampang,PLAZA RAKYAT,AG-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG09,Ampang,HANG TUAH,AG-MR-PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG10,Ampang,PUDU,AG-PH,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG11,Ampang,CHAN SOW LIN,AG-PH-PYL,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+AG12,Ampang,MIHARJA,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG13,Ampang,MALURI,AG-KGL,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG14,Ampang,PANDAN JAYA,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG15,Ampang,PANDAN INDAH,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG16,Ampang,CEMPAKA,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG17,Ampang,CAHAYA,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+AG18,Ampang,AMPANG,AG,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+SP12,Sri Petaling,CHERAS,PH,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+SP13,Sri Petaling,SALAK SELATAN,PH,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+SP14,Sri Petaling,BANDAR TUN RAZAK,PH,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+SP15,Sri Petaling,BANDAR TASIK SELATAN,PH,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+SP16,Sri Petaling,SUNGAI BESI,PH-PYL,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP17,Sri Petaling,BUKIT JALIL,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP18,Sri Petaling,SRI PETALING,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP19,Sri Petaling,AWAN BESAR,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP20,Sri Petaling,MUHIBBAH,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP21,Sri Petaling,ALAM SUTERA,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP22,Sri Petaling,KINRARA,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP24,Sri Petaling,IOI PUCHONG JAYA,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP25,Sri Petaling,PUSAT BANDAR PUCHONG,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP26,Sri Petaling,TAMAN PERINDUSTRIAN PUCHONG,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP27,Sri Petaling,BANDAR PUTERI,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP28,Sri Petaling,PUCHONG PERDANA,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+SP29,Sri Petaling,PUCHONG PRIMA,PH,yes,yes,yes,no,no,100-200m around station,Maps,14/8/2026
+KG04,MRT Kajang,KWASA DAMANSARA,KGL-PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG05,MRT Kajang,KWASA SENTRAL,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG06,MRT Kajang,KOTA DAMANSARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG07,MRT Kajang,SURIAN,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG08,MRT Kajang,MUTIARA DAMANSARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG09,MRT Kajang,BANDAR UTAMA,KGL-SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG10,MRT Kajang,TAMAN TUN DR ISMAIL,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG12,MRT Kajang,PHILEO DAMANSARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG13,MRT Kajang,PUSAT BANDAR DAMANSARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG14,MRT Kajang,SEMANTAN,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG15,MRT Kajang,MUZIUM NEGARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG17,MRT Kajang,MERDEKA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG18A,MRT Kajang,BUKIT BINTANG,KGL-MR,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG20,MRT Kajang,TUN RAZAK EXCHANGE,KGL-PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG21,MRT Kajang,COCHRANE,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG23,MRT Kajang,TAMAN PERTAMA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG24,MRT Kajang,TAMAN MIDAH,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG25,MRT Kajang,TAMAN MUTIARA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG26,MRT Kajang,TAMAN CONNAUGHT,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG27,MRT Kajang,TAMAN SUNTEX,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG28,MRT Kajang,SRI RAYA,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG29,MRT Kajang,BANDAR TUN HUSSEIN ONN,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG30,MRT Kajang,BATU 11 CHERAS,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG31,MRT Kajang,BUKIT DUKUNG,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG33,MRT Kajang,SUNGAI JERNIH,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG34,MRT Kajang,STADIUM KAJANG,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+KG35,MRT Kajang,KAJANG,KGL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY03,MRT Putrajaya,KAMPUNG SELAMAT,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY04,MRT Putrajaya,SUNGAI BULOH,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY05,MRT Putrajaya,DAMANSARA DAMAI,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY06,MRT Putrajaya,SRI DAMANSARA BARAT,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY07,MRT Putrajaya,SRI DAMANSARA SENTRAL,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY08,MRT Putrajaya,SRI DAMANSARA TIMUR,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY09,MRT Putrajaya,METRO PRIMA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY10,MRT Putrajaya,KEPONG BARU,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY11,MRT Putrajaya,JINJANG,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY12,MRT Putrajaya,SRI DELIMA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY13,MRT Putrajaya,KAMPUNG BATU,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY14,MRT Putrajaya,KENTOMEN,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY15,MRT Putrajaya,JALAN IPOH,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY16,MRT Putrajaya,SENTUL BARAT,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY18,MRT Putrajaya,HOSPITAL KUALA LUMPUR,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY19,MRT Putrajaya,RAJA UDA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY21,MRT Putrajaya,PERSIARAN KLCC,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY22,MRT Putrajaya,CONLAY,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY27,MRT Putrajaya,KUCHAI,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY28,MRT Putrajaya,TAMAN NAGA EMAS,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY31,MRT Putrajaya,SERDANG RAYA UTARA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY32,MRT Putrajaya,SERDANG RAYA SELATAN,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY33,MRT Putrajaya,SERDANG JAYA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY34,MRT Putrajaya,UPM,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY36,MRT Putrajaya,TAMAN EQUINE,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY37,MRT Putrajaya,PUTRA PERMAI,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY38,MRT Putrajaya,16 SIERRA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY39,MRT Putrajaya,CYBERJAYA UTARA,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY40,MRT Putrajaya,CYBERJAYA CITY CENTRE,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+PY41,MRT Putrajaya,PUTRAJAYA SENTRAL,PYL,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+MR02,Monorail,TUN SAMBANTHAN,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR03,Monorail,MAHARAJALELA,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR05,Monorail,IMBI,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR07,Monorail,RAJA CHULAN,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR08,Monorail,BUKIT NANAS,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR09,Monorail,MEDAN TUANKU,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+MR10,Monorail,CHOW KIT,MR,yes,yes,no,no,no,100-200m around station,Maps,14/8/2026
+BRT01,BRT Sunway,SUNWAY-SETIA JAYA,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT02,BRT Sunway,MENTARI,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT03,BRT Sunway,SUNWAY LAGOON,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT04,BRT Sunway,SUNMED,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT05,BRT Sunway,SunU-Monash,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT06,BRT Sunway,SOUTH QUAY-USJ 1,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+BRT07,BRT Sunway,USJ7,BRT,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA02,LRT Shah Alam,KAYU ARA,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA03,LRT Shah Alam,BANDAR UTAMA 11,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA05,LRT Shah Alam,DAMANSARA IDAMAN,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA06,LRT Shah Alam,SUBANG,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA07,LRT Shah Alam,GLENMARIE 2,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA09,LRT Shah Alam,KERJAYA,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA10,LRT Shah Alam,STADIUM SHAH ALAM,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA12,LRT Shah Alam,DATO' MENTERI,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA14,LRT Shah Alam,UITM SHAH ALAM,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA15,LRT Shah Alam,SEKSYEN 7,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA17,LRT Shah Alam,BANDAR BARU KLANG,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA18,LRT Shah Alam,PASAR KLANG,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA19,LRT Shah Alam,JALAN MERU,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA20,LRT Shah Alam,JAMBATAN KOTA,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA21,LRT Shah Alam,TAMAN SELATAN,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA22,LRT Shah Alam,SERI ANDALAS,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA23,LRT Shah Alam,KLANG JAYA,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA24,LRT Shah Alam,BANDAR BUKIT TINGGI,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026
+SA26,LRT Shah Alam,JOHAN SETIA,SA,yes,yes,yes,no,yes,100-200m around station,Maps,14/8/2026

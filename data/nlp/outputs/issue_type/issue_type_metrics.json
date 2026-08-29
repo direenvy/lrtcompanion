@@ -1,0 +1,81 @@
+{
+  "target": "issue_type",
+  "train_rows": 259,
+  "test_rows": 39,
+  "labels": [
+    "aircond",
+    "breakdown",
+    "crowding",
+    "delay",
+    "information",
+    "other",
+    "staff_service"
+  ],
+  "accuracy": 0.6410256410256411,
+  "confusion_matrix": [
+    [
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      2,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      6,
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+      7,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      3,
+      0,
+      8,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ]
+  ],
+  "classification_report": "               precision    recall  f1-score   support\n\n      aircond       1.00      1.00      1.00         2\n    breakdown       0.40      0.40      0.40         5\n     crowding       0.00      0.00      0.00         0\n        delay       0.55      0.60      0.57        10\n  information       1.00      0.78      0.88         9\n        other       0.57      0.67      0.62        12\nstaff_service       0.00      0.00      0.00         1\n\n     accuracy                           0.64        39\n    macro avg       0.50      0.49      0.49        39\n weighted avg       0.65      0.64      0.64        39\n"
+}

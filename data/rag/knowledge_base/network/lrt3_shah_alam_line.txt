@@ -1,0 +1,46 @@
+LRT SHAH ALAM LINE (LRT3) — LINE INFORMATION
+Source: official GTFS feed (data.gov.my, July 2026) and Rapid KL (myrapid.com.my).
+
+The LRT Shah Alam Line, also known as LRT3, opened for passenger service on
+29 June 2026. It runs 37.8 km from Bandar Utama in Petaling Jaya to Johan Setia
+in Klang, serving the Shah Alam and Klang corridor.
+
+The line currently has 20 operational stations (five additional
+in-fill stations are planned to open around 2028: Tropicana, Temasya, Raja Muda,
+Bukit Raja Selatan, and Bandar Botanik).
+
+Stations in order from Bandar Utama to Johan Setia:
+- BANDAR UTAMA
+- KAYU ARA
+- BANDAR UTAMA 11
+- DAMANSARA IDAMAN
+- SUBANG
+- GLENMARIE 2
+- KERJAYA
+- STADIUM SHAH ALAM
+- DATO' MENTERI - SA SENTRAL
+- UITM SHAH ALAM
+- SEKSYEN 7
+- BANDAR BARU KLANG
+- PASAR KLANG
+- JALAN MERU
+- JAMBATAN KOTA
+- TAMAN SELATAN
+- SERI ANDALAS
+- KLANG JAYA
+- BANDAR BUKIT TINGGI
+- JOHAN SETIA
+
+Interchanges:
+- Bandar Utama: connection to the MRT Kajang Line. This is an out-of-station
+  transfer — passengers exit, walk at street level, and re-enter (allow around
+  10-12 minutes).
+- Glenmarie 2: connection to the LRT Kelana Jaya Line at Glenmarie station via
+  a direct pedestrian link bridge (allow around 8 minutes).
+- At Klang, a walking link connects toward the KTM Klang station.
+
+The line accepts the same payment media as other Rapid KL lines — Touch 'n Go,
+open payment, and passes such as My50 — but its fares are published in a
+separate LRT3 fare table: it is not part of the 156-station integrated fare
+matrix. A journey combining LRT3 with another line (e.g. transferring at
+Bandar Utama) costs the LRT3 fare plus the integrated network fare.

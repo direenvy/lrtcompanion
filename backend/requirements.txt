@@ -1,0 +1,20 @@
+# Production dependencies — installed on Render (CPU-only host).
+# Voice transcription uses Groq's hosted Whisper API here, so faster-whisper
+# and torch are NOT installed in production (they need a GPU to be useful and
+# would bloat the build). For local GPU Whisper, see requirements-dev.txt.
+
+fastapi>=0.111.0
+uvicorn>=0.30.0
+python-dotenv>=1.0.1
+supabase>=2.4.2
+google-generativeai>=0.7.0
+scikit-learn>=1.4.2
+joblib>=1.4.2
+networkx>=3.3
+pandas>=2.2.2
+pydantic>=2.7.1
+imbalanced-learn>=0.14.0
+rapidfuzz>=3.14.0
+httpx>=0.27
+python-multipart>=0.0.9
+requests>=2.31

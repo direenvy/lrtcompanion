@@ -1,0 +1,403 @@
+@import "tailwindcss";
+
+@theme {
+  /* DESIGN.md — Sonos-inspired achromatic tokens */
+  --color-obsidian: #000000;
+  --color-paper-white: #ffffff;
+  --color-concrete: #f5f5f5;
+  --color-graphite: #2e2e2e;
+  --color-mist: #e0e0e0;
+  --color-ash: #cdcdcd;
+  --color-smoke: #bfbfbf;
+  --color-slate: #737373;
+  --color-charcoal: #5f5f5f;
+  --color-fog: #8f8f8f;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Surfaces */
+  --bg:        #f5f5f5;   /* concrete canvas */
+  --surface:   #ffffff;   /* card */
+  --surface-2: #ffffff;
+  --border:    #e0e0e0;   /* mist hairline */
+  --border-md: #cdcdcd;   /* ash visible */
+
+  /* Text */
+  --text-1:    #000000;
+  --text-2:    #5f5f5f;
+  --text-3:    #8f8f8f;
+
+  /* Functional status colours — the ONLY chromatic values allowed.
+     Use exclusively for line status, alerts, sentiment, GTFS line identity. */
+  --green:     #22c55e;
+  --green-dim: rgba(34,197,94,0.10);
+  --green-bd:  rgba(34,197,94,0.30);
+  --red:       #ef4444;
+  --amber:     #f59e0b;
+  --blue:      #3b82f6;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  /* Guarantees no horizontal scroll on any device. Individual overflowing
+     elements (tables, code blocks) manage their own overflow-x inside their
+     own containers. This is the single line that prevents the "content on
+     the left half of the screen" mobile bug — a full-bleed hero that
+     computes width from 100vw includes the scrollbar and can bleed by 1–17
+     pixels, and any bleed forces the whole viewport to widen. */
+  overflow-x: hidden;
+  /* Body margin default is 8px in browsers — hard reset so the ambient glow
+     and full-bleed hero don't gain a horizontal offset. */
+  margin: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cdcdcd; border-radius: 99px; }
+
+/* ── Animations ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse-green {
+  0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.35); }
+  50%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+}
+@keyframes pulse-red {
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%      { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
+}
+@keyframes bounce-dot {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes bar-grow {
+  from { width: 0; }
+}
+
+.anim-fade-up  { animation: fade-up  0.45s cubic-bezier(.22,1,.36,1) both; }
+.anim-fade-in  { animation: fade-in  0.3s ease both; }
+.anim-spin     { animation: spin 0.8s linear infinite; }
+.pulse-green   { animation: pulse-green 2s ease infinite; }
+.pulse-red     { animation: pulse-red  1.4s ease infinite; }
+.bounce-dot    { animation: bounce-dot 1.1s ease-in-out infinite; }
+.bar-grow      { animation: bar-grow 0.7s cubic-bezier(.22,1,.36,1) both; }
+
+/* ── Reusable UI primitives (DESIGN.md) ── */
+
+/* Filled Dark Pill Button — primary CTA */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: #000000; color: #ffffff;
+  font-weight: 500; font-size: 14px;
+  padding: 12px 24px; border-radius: 9999px; border: none;
+  cursor: pointer; transition: background 0.15s, transform 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover  { background: #2e2e2e; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+/* Ghost Outlined Pill — secondary action */
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: transparent; color: #000000;
+  font-weight: 500; font-size: 14px;
+  padding: 12px 24px; border-radius: 9999px;
+  border: 1px solid #000000;
+  cursor: pointer; transition: background 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover  { background: rgba(0,0,0,0.05); }
+.btn-ghost:active { transform: scale(0.98); }
+.btn-ghost:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+/* Card — white surface on concrete canvas; separation by surface shift, not border */
+.card {
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.card:hover { border-color: var(--border); }
+.card-lift:hover { transform: translateY(-2px); }
+
+/* Input */
+.input {
+  width: 100%; background: var(--bg);
+  border: 1px solid var(--border-md);
+  border-radius: 10px; padding: 0.65rem 1rem;
+  font-size: 14px; color: var(--text-1);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.input::placeholder { color: var(--color-smoke); }
+.input:focus { border-color: #000000; }
+
+/* Textarea */
+.textarea {
+  width: 100%; resize: none; background: var(--bg);
+  border: 1px solid var(--border-md);
+  border-radius: 10px; padding: 0.75rem 1rem;
+  font-size: 14px; color: var(--text-1);
+  line-height: 1.6; transition: border-color 0.2s;
+  outline: none; font-family: inherit;
+}
+.textarea::placeholder { color: var(--color-smoke); }
+.textarea:focus { border-color: #000000; }
+
+/* Badge — small pill; functional colour allowed here */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.6875rem; font-weight: 500;
+  padding: 0.2rem 0.7rem; border-radius: 9999px;
+  border: 1px solid;
+}
+
+/* Section label */
+.section-label {
+  font-size: 11px; font-family: inherit; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+/* Divider */
+.divider { height: 1px; background: var(--border); }
+
+/* Nav link */
+.nav-link {
+  text-decoration: none;
+  color: var(--color-charcoal);
+  font-size: 12.5px;
+  font-weight: 400;
+  padding: 6px 8px;
+  border-radius: 9999px;
+  transition: color 0.15s, background 0.15s;
+  /* A single label never wraps. If the whole row runs out of room the parent
+     shrinks and the LAST label gets an ellipsis — never overflow onto the
+     wordmark or account chip. min-width:0 is required or flex refuses to
+     shrink a child below its content width. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.nav-link:hover {
+  color: #000000;
+  background: rgba(0,0,0,0.05);
+}
+
+/* Small pill chip button */
+.pill-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-charcoal);
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid var(--border-md);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.pill-btn:hover {
+  color: #000000;
+  border-color: #000000;
+}
+
+/* ── Markdown body inside assistant chat bubbles ── */
+.md-body { font-size: 14px; line-height: 1.6; color: #2e2e2e; }
+.md-body p { margin: 0 0 0.5em; }
+.md-body p:last-child { margin-bottom: 0; }
+.md-body strong { color: #000000; font-weight: 600; }
+.md-body em { color: #5f5f5f; font-style: italic; }
+.md-body ul, .md-body ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
+.md-body li { margin-bottom: 0.25em; }
+.md-body li::marker { color: #bfbfbf; }
+.md-body code {
+  font-size: 12px;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #000000;
+}
+.md-body h1,.md-body h2,.md-body h3 {
+  color: #000000;
+  font-weight: 500;
+  margin: 0.6em 0 0.3em;
+  line-height: 1.3;
+}
+.md-body h1 { font-size: 16px; }
+.md-body h2 { font-size: 15px; }
+.md-body h3 { font-size: 14px; }
+
+/* ── Scroll reveal — sections fade up as they enter the viewport ── */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(.22,1,.36,1), transform 0.8s cubic-bezier(.22,1,.36,1);
+}
+.reveal-on-scroll.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Full-bleed hero — breaks out of the centered content column ── */
+.full-bleed-hero {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
+  margin-top: -3rem;   /* cancels .page-main top padding so video sits flush under nav */
+}
+
+/* Hero pill CTAs — on-photography treatment with hover states */
+.hero-btn-solid {
+  background: #ffffff; color: #000000;
+  padding: 16px 32px; border-radius: 9999px;
+  font-size: 16px; font-weight: 500; text-decoration: none;
+  display: inline-block;
+  transition: background 0.2s, transform 0.15s;
+}
+.hero-btn-solid:hover { background: #e0e0e0; }
+.hero-btn-solid:active { transform: scale(0.98); }
+
+.hero-btn-ghost {
+  background: transparent; color: #ffffff;
+  border: 1px solid #ffffff;
+  padding: 16px 32px; border-radius: 9999px;
+  font-size: 16px; font-weight: 500; text-decoration: none;
+  display: inline-block;
+  transition: background 0.2s, transform 0.15s;
+}
+.hero-btn-ghost:hover { background: rgba(255,255,255,0.15); }
+.hero-btn-ghost:active { transform: scale(0.98); }
+
+.hero-pause {
+  position: absolute; right: 24px; bottom: 24px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: transparent; border: 1px solid #ffffff;
+  color: #ffffff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.hero-pause:hover { background: rgba(255,255,255,0.2); }
+
+/* The links used to be absolutely positioned and centred on wide screens for a
+   wordmark-left / links-centre / icons-right look. That takes them OUT of the
+   flex flow, so nothing stops them sliding underneath the wordmark and the
+   account chip — which is what happened once the bar grew to eight longer
+   labels. They now stay a normal flex item between the two, which cannot
+   overlap by construction. */
+
+/* Nav collapse — driven by how much room the labels need, NOT by the phone
+   breakpoint. Eight labels plus the wordmark, BETA pill and account chip stop
+   fitting well above 768px, so the hamburger has to take over earlier or the
+   labels wrap onto two and three lines.
+   Measured in the browser at the shipped sizes: 705px of links + 119px
+   wordmark + 130px right-hand side + padding = 1018px. 1040 leaves a small
+   margin for font rendering differences across machines. Re-measure if a
+   label is renamed — "Advanced Recovery Planner" alone is ~185px. */
+@media (max-width: 1040px) {
+  .nav-burger        { display: inline-flex !important; }
+  .nav-links-desktop { display: none !important; }
+  .nav-beta          { display: none !important; }
+}
+
+/* ── Mobile responsive ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-main {
+    padding: 1.5rem 1rem 4rem !important;
+  }
+
+  .full-bleed-hero { margin-top: -1.5rem; }
+
+  /* Collapse any 2+ column grid to one column */
+  main [style*="grid-template-columns: repeat(2"],
+  main [style*="grid-template-columns: repeat(3"],
+  main [style*="grid-template-columns: repeat(4"],
+  main [style*="grid-template-columns: 1.4fr"],
+  main [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce huge headlines */
+  h1 { font-size: clamp(1.75rem, 7vw, 2.5rem) !important; line-height: 1.1 !important; }
+
+  /* Bump up tiny text for readability */
+  body { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  /* Tap targets — buttons & pills need to be touchable */
+  .btn-primary, .btn-ghost, button {
+    min-height: 40px;
+  }
+  .pill-btn { min-height: 32px; padding: 6px 14px !important; font-size: 12px !important; }
+}
+
+/* ── Accessibility ─────────────────────────────────────────────────── */
+
+/* Visually hidden, still read by screen readers. Not `display:none` and not
+   `visibility:hidden` — both remove the node from the accessibility tree. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link — first thing in the tab order, so a keyboard/screen-reader user
+   can jump past the seven nav links on every page load instead of tabbing
+   through them each time. Hidden until focused. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  z-index: 100;
+  background: #000000;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* Keyboard focus must always be visible. Mouse users never see this
+   (:focus-visible), so it costs the visual design nothing. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

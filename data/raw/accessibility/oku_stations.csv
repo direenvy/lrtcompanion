@@ -1,0 +1,188 @@
+stop_id,stop_name,route_id,wheelchair_accessible,source_wheelchair,blind_tactile,source_blindT,verified_date
+KJ1,GOMBAK,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ10,KLCC,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ11,KAMPUNG BARU - CBP COOPBANK PERTAMA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ12,DANG WANGI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ13,MASJID JAMEK,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ14,PASAR SENI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ15,KL SENTRAL - REDONE,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ16,BANGSAR - BANK RAKYAT,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ17,ABDULLAH HUKUM,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ18,KERINCHI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ19,UNIVERSITI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ2,TAMAN MELATI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ20,TAMAN JAYA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ21,ASIA JAYA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ22,TAMAN PARAMOUNT,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ23,TAMAN BAHAGIA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ24,KELANA JAYA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ25,LEMBAH SUBANG,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ26,ARA DAMANSARA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ27,GLENMARIE,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ28,SUBANG JAYA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ29,SS 15,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ3,WANGSA MAJU,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ30,SS 18,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ31,USJ 7,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ32,TAIPAN,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ33,WAWASAN,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ34,USJ 21,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ35,ALAM MEGAH,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ36,SUBANG ALAM,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ37,PUTRA HEIGHTS,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ4,SRI RAMPAI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ5,SETIAWANGSA,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ6,JELATEK,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ7,DATO' KERAMAT,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ8,DAMAI,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+KJ9,AMPANG PARK,KJ,yes,Maps/Pulse,no,Pulse,2/8/2026
+AG1,SENTUL TIMUR,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG10,PUDU,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG11,CHAN SOW LIN,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG12,MIHARJA,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG13,MALURI,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG14,PANDAN JAYA,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG15,PANDAN INDAH,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG16,CEMPAKA,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG17,CAHAYA,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG18,AMPANG,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG2,SENTUL,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG3,TITIWANGSA,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG4,PWTC,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG5,SULTAN ISMAIL,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG6,BANDARAYA - UOB,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG7,MASJID JAMEK,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG8,PLAZA RAKYAT,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+AG9,HANG TUAH,AG,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP1,SENTUL TIMUR,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP10,PUDU,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP11,CHAN SOW LIN,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP12,CHERAS,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP13,SALAK SELATAN,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP14,BANDAR TUN RAZAK,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP15,BANDAR TASIK SELATAN,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP16,SUNGAI BESI,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP17,BUKIT JALIL,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP18,SRI PETALING,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP19,AWAN BESAR,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP2,SENTUL,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP20,MUHIBBAH,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP21,ALAM SUTERA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP22,KINRARA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP24,IOI PUCHONG JAYA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP25,PUSAT BANDAR PUCHONG,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP26,TAMAN PERINDUSTRIAN PUCHONG,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP27,BANDAR PUTERI,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP28,PUCHONG PERDANA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP29,PUCHONG PRIMA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP3,TITIWANGSA,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP31,PUTRA HEIGHTS,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP4,PWTC,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP5,SULTAN ISMAIL,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP6,BANDARAYA - UOB,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP7,MASJID JAMEK,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP8,PLAZA RAKYAT,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+SP9,HANG TUAH,PH,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG04,KWASA DAMANSARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG05,KWASA SENTRAL,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG06,KOTA DAMANSARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG07,SURIAN,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG08,MUTIARA DAMANSARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG09,BANDAR UTAMA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG10,TAMAN TUN DR ISMAIL,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG12,PHILEO DAMANSARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG13,PUSAT BANDAR DAMANSARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG14,SEMANTAN,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG15,MUZIUM NEGARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG16,PASAR SENI,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG17,MERDEKA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG18A,BUKIT BINTANG ,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG20,TUN RAZAK EXCHANGE,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG21,COCHRANE,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG22,MALURI,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG23,TAMAN PERTAMA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG24,TAMAN MIDAH,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG25,TAMAN MUTIARA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG26,TAMAN CONNAUGHT,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG27,TAMAN SUNTEX,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG28,SRI RAYA,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG29,BANDAR TUN HUSSEIN ONN,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG30,BATU 11 CHERAS,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG31,BUKIT DUKUNG,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG33,SUNGAI JERNIH,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG34,STADIUM KAJANG,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+KG35,KAJANG,KGL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY01,KWASA DAMANSARA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY03,KAMPUNG SELAMAT,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY04,SUNGAI BULOH,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY05,DAMANSARA DAMAI,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY06,SRI DAMANSARA BARAT,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY07,SRI DAMANSARA SENTRAL,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY08,SRI DAMANSARA TIMUR,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY09,METRO PRIMA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY10,KEPONG BARU,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY11,JINJANG,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY12,SRI DELIMA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY13,KAMPUNG BATU,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY14,KENTOMEN,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY15,JALAN IPOH,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY16,SENTUL BARAT,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY17,TITIWANGSA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY18,HOSPITAL KUALA LUMPUR,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY19,RAJA UDA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY20,AMPANG PARK,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY21,PERSIARAN KLCC,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY22,CONLAY,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY23,TUN RAZAK EXCHANGE,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY24,CHAN SOW LIN,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY27,KUCHAI,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY28,TAMAN NAGA EMAS,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY29,SUNGAI BESI,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY31,SERDANG RAYA UTARA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY32,SERDANG RAYA SELATAN,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY33,SERDANG JAYA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY34,UPM,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY36,TAMAN EQUINE,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY37,PUTRA PERMAI,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY38,16 SIERRA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY39,CYBERJAYA UTARA,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY40,CYBERJAYA CITY CENTRE,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+PY41,PUTRAJAYA SENTRAL,PYL,yes,Maps/Pulse,yes,Pulse,2/8/2026
+MR1,KL SENTRAL,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR10,CHOW KIT,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR11,TITIWANGSA,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR2,TUN SAMBANTHAN,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR3,MAHARAJALELA,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR4,HANG TUAH,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR5,IMBI,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR6,BUKIT BINTANG ,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR7,RAJA CHULAN,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR8,BUKIT NANAS,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+MR9,MEDAN TUANKU,MR,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT1,SUNWAY-SETIA JAYA,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT2,MENTARI,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT3,SUNWAY LAGOON ,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT4,SUNMED,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT5,SunU-Monash,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT6,SOUTH QUAY-USJ 1,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+BRT7,USJ7,BRT,no,Maps/Pulse,no,Pulse,2/8/2026
+SA1,BANDAR UTAMA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA10,STADIUM SHAH ALAM,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA12,DATO' MENTERI - SA SENTRAL,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA14,UITM SHAH ALAM,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA15,SEKSYEN 7,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA17,BANDAR BARU KLANG,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA18,PASAR KLANG,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA19,JALAN MERU,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA2,KAYU ARA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA20,JAMBATAN KOTA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA21,TAMAN SELATAN,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA22,SERI ANDALAS,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA23,KLANG JAYA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA24,BANDAR BUKIT TINGGI,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA26,JOHAN SETIA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA3,BANDAR UTAMA 11,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA5,DAMANSARA IDAMAN,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA6,SUBANG,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA7,GLENMARIE 2,SA,yes,Maps/Pulse,no,Pulse,2/8/2026
+SA9,KERJAYA,SA,yes,Maps/Pulse,no,Pulse,2/8/2026

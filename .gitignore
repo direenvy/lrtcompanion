@@ -1,0 +1,117 @@
+# ── SECRETS — NEVER commit these ───────────────────────────────────
+# Gemini + Supabase + X keys live here. Rotating a leaked key takes
+# minutes; explaining to your supervisor why they showed up in a public
+# repo takes longer.
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!.env.sample
+
+# Supabase / other auth
+**/credentials.json
+**/service-account*.json
+
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.hypothesis/
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ── Node / Next.js ────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+.swc/
+next-env.d.ts
+.npm/
+.eslintcache
+*.tsbuildinfo
+
+# ── Model weights / large caches ──────────────────────────────────
+# Whisper weights are ~1.5 GB and download on first use.
+# Large caches (embeddings, ingest state, partials) stay out — they either
+# regenerate on demand or are per-machine state. The two small NLP baseline
+# classifiers are whitelisted below so they ship with the deployment (Render
+# has no training corpus to rebuild them from).
+# GitHub blocks single files > 100 MB anyway.
+backend/models/*.joblib
+backend/models/*.pkl
+backend/models/*.bin
+backend/models/*.safetensors
+backend/models/x_ingest_state.json
+backend/models/rag_embeddings_cache*.pkl
+backend/models/*.partial.pkl
+!backend/models/sentiment_baseline.joblib
+!backend/models/issue_type_baseline.joblib
+
+# HuggingFace / Whisper caches (usually in home dir but just in case)
+.cache/
+huggingface/
+
+# ── Data — usually keep the CSVs (small), skip generated artefacts ─
+# The chunked corpus is a build artefact — regenerable from source PDFs.
+data/rag/outputs/*.jsonl
+data/nlp/interim/live_x_labelling.csv
+
+# Everything under data/ that's a build artefact
+data/**/*.parquet
+data/**/*.arrow
+
+# ── OS junk ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+._*
+
+# ── IDE ───────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.iml
+.claude/
+.cursorignore
+
+# ── Logs / temp ───────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+tmp/
+temp/
+
+# ── Local backup / workspace scratch ──────────────────────────────
+FYP\ _Backup_*/
+FYP-materials/
+scratchpad/
+
+# ── Reports / private docs (adjust if you want them public) ───────
+*.docx
+*.pdf.local

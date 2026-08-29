@@ -1,0 +1,44 @@
+RAPID KL RAIL — OPERATING HOURS AND TRAIN FREQUENCIES
+Source: official GTFS schedule data published by Prasarana on data.gov.my (July 2026 feed).
+
+== LRT Kelana Jaya Line (KJ) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 23:15. Frequency: from 6:00 to 7:00, a train arrives roughly every 7 minutes; from 7:00 to 9:00, a train arrives roughly every 4 minutes; from 9:00 to 17:00, a train arrives roughly every 7 minutes; from 17:00 to 19:00, a train arrives roughly every 4 minutes; from 19:00 to 23:15, a train arrives roughly every 7 minutes.
+Saturday: first train around 6:00, last train around 23:15. Frequency: from 6:00 to 23:15, a train arrives roughly every 7 minutes.
+Sunday: first train around 6:00, last train around 23:15. Frequency: from 6:00 to 23:15, a train arrives roughly every 7 minutes.
+
+== LRT Ampang Line (AG) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 23:25. Frequency: from 6:00 to 9:00, a train arrives roughly every 3 minutes; from 9:00 to 17:00, a train arrives roughly every 5 minutes; from 17:00 to 19:00, a train arrives roughly every 3 minutes; from 19:00 to 23:25, a train arrives roughly every 5 minutes.
+Saturday: first train around 6:00, last train around 23:25. Frequency: from 6:00 to 23:25, a train arrives roughly every 5 minutes.
+Sunday: first train around 6:00, last train around 23:25. Frequency: from 6:00 to 23:25, a train arrives roughly every 5 minutes.
+
+== LRT Sri Petaling Line (PH) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 24:00. Frequency: from 6:00 to 9:00, a train arrives roughly every 3 minutes; from 9:00 to 17:00, a train arrives roughly every 5 minutes; from 17:00 to 19:00, a train arrives roughly every 3 minutes; from 19:00 to 24:00, a train arrives roughly every 5 minutes.
+Saturday: first train around 6:00, last train around 24:00. Frequency: from 6:00 to 24:00, a train arrives roughly every 5 minutes.
+Sunday: first train around 6:00, last train around 24:00. Frequency: from 6:00 to 24:00, a train arrives roughly every 5 minutes.
+
+== MRT Kajang Line (KGL) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 24:00. Frequency: from 6:00 to 9:00, a train arrives roughly every 6 minutes; from 9:00 to 17:00, a train arrives roughly every 10 minutes; from 17:00 to 19:00, a train arrives roughly every 6 minutes; from 19:00 to 24:00, a train arrives roughly every 10 minutes.
+Saturday: first train around 6:00, last train around 22:55. Frequency: from 6:00 to 22:55, a train arrives roughly every 10 minutes.
+Sunday: first train around 6:00, last train around 22:55. Frequency: from 6:00 to 22:55, a train arrives roughly every 10 minutes.
+
+== MRT Putrajaya Line (PYL) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 24:00. Frequency: from 6:00 to 7:00, a train arrives roughly every 10 minutes; from 7:00 to 9:00, a train arrives roughly every 5 minutes; from 9:00 to 17:00, a train arrives roughly every 10 minutes; from 17:00 to 19:00, a train arrives roughly every 5 minutes; from 19:00 to 22:00, a train arrives roughly every 10 minutes; from 22:00 to 24:00, a train arrives roughly every 12 minutes.
+Saturday: first train around 6:00, last train around 22:55. Frequency: from 6:00 to 22:55, a train arrives roughly every 10 minutes.
+Sunday: first train around 6:00, last train around 22:55. Frequency: from 6:00 to 22:55, a train arrives roughly every 10 minutes.
+
+== KL Monorail Line (MR) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 23:30. Frequency: from 6:00 to 9:00, a train arrives roughly every 7 minutes; from 9:00 to 17:00, a train arrives roughly every 10 minutes; from 17:00 to 19:00, a train arrives roughly every 7 minutes; from 19:00 to 23:30, a train arrives roughly every 10 minutes.
+Saturday: first train around 6:00, last train around 23:30. Frequency: from 6:00 to 23:30, a train arrives roughly every 12 minutes.
+Sunday: first train around 6:00, last train around 23:30. Frequency: from 6:00 to 23:30, a train arrives roughly every 12 minutes.
+
+== BRT Sunway Line (BRT) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 24:00. Frequency: from 6:00 to 7:00, a train arrives roughly every 8 minutes; from 7:00 to 9:00, a train arrives roughly every 4 minutes; from 9:00 to 17:00, a train arrives roughly every 8 minutes; from 17:00 to 19:00, a train arrives roughly every 4 minutes; from 19:00 to 24:00, a train arrives roughly every 8 minutes.
+Saturday: first train around 6:00, last train around 24:00. Frequency: from 6:00 to 24:00, a train arrives roughly every 6 minutes.
+Sunday: first train around 6:00, last train around 24:00. Frequency: from 6:00 to 24:00, a train arrives roughly every 6 minutes.
+
+== LRT Shah Alam Line (SA) ==
+Monday to Friday (weekdays): first train around 6:00, last train around 24:00. Frequency: from 6:00 to 7:00, a train arrives roughly every 10 minutes; from 7:00 to 9:00, a train arrives roughly every 8 minutes; from 9:00 to 16:30, a train arrives roughly every 10 minutes; from 16:30 to 19:30, a train arrives roughly every 8 minutes; from 19:30 to 24:00, a train arrives roughly every 10 minutes.
+Saturday: first train around 6:00, last train around 24:00. Frequency: from 6:00 to 24:00, a train arrives roughly every 10 minutes.
+Sunday: first train around 6:00, last train around 23:30. Frequency: from 6:00 to 23:30, a train arrives roughly every 10 minutes.
+
+Note: times are scheduled values from the official feed; during disruptions, actual service may differ. Check the Line Status board or @AskRapidKL for live updates.

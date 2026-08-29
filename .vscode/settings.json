@@ -1,0 +1,9 @@
+{
+  "python.terminal.activateEnvironment": false,
+  // Scripts add "backend" to sys.path at runtime (e.g.
+  // scripts/make_safety_evidence_folders.py) so they can import from
+  // agents/, api/, db/. Tell Pylance / Pylint about it too, so their
+  // static analysis stops flagging those imports as unresolvable.
+  "python.analysis.extraPaths": ["backend"],
+  "python.autoComplete.extraPaths": ["backend"]
+}

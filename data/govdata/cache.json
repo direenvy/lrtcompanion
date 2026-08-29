@@ -1,0 +1,46 @@
+{
+  "fetched_at": "2026-07-29T10:36:17.279285+00:00",
+  "sources": {
+    "gtfs_static": {
+      "ok": true,
+      "official_stop_count": 187,
+      "local_stop_count": 187,
+      "match": true,
+      "files_in_zip": [
+        "agency.txt",
+        "__MACOSX/._agency.txt",
+        "calendar.txt",
+        "__MACOSX/._calendar.txt",
+        "frequencies.txt",
+        "__MACOSX/._frequencies.txt",
+        "routes.txt",
+        "__MACOSX/._routes.txt",
+        "shapes.txt",
+        "__MACOSX/._shapes.txt",
+        "stop_times.txt",
+        "__MACOSX/._stop_times.txt",
+        "stops.txt",
+        "__MACOSX/._stops.txt",
+        "trips.txt",
+        "__MACOSX/._trips.txt"
+      ]
+    },
+    "vehicle_positions": {
+      "ok": false,
+      "error": "HTTP Error 404: Not Found",
+      "note": "Rail realtime feed is unstable upstream \u2014 known limitation"
+    },
+    "ridership": {
+      "ok": true,
+      "date": "2020-02-04",
+      "rail": {
+        "rail_lrt_kj": 317549,
+        "rail_lrt_ag": null,
+        "rail_mrt_kjg": null,
+        "rail_mrt_pjy": null,
+        "rail_monorail": 39769
+      },
+      "total_rows": 400
+    }
+  }
+}

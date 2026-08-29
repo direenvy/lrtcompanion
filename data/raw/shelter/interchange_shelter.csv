@@ -1,0 +1,19 @@
+station,lines,covered,transfer_type,source,evidence_file,verified_date
+MASJID JAMEK,KJL-AGL-SPL,yes,internal,Maps,masjidjamek_covered.png,3/8/2026
+CHAN SOW LIN,AGL-SPL-PYL,yes,internal,Maps,chansowlin_covered.png,3/8/2026
+GLENMARIE,SAL-KJL,yes,internal,Google,glenmarie_covered.png,3/8/2026
+BANDAR UTAMA,SAL-KGL,yes,internal,Google,bandarutama_covered.png,3/8/2026
+PASAR SENI,KGL-KJL,yes,internal,Maps,pasarseni_covered.png,3/8/2026
+TUN RAZAK EXCHANGE,KGL-PYL,yes,internal,Maps,trx_covered.png,3/8/2026
+USJ-7,BRT-KJL,yes,internal,Google,usj7_covered.png,3/8/2026
+HANG TUAH,MRL-AGL-SPL,yes,internal,Google,hangtuah_covered.png,3/8/2026
+KWASA DAMANSARA,KGL-PYL,yes,internal,Google,kwasadamansara_covered.png,3/8/2026
+BUKIT BINTANG,KGL-MRL,no,external,Google,bukitbintang_notcovered.png,3/8/2026
+MALURI,KGL-AGL,yes,internal,Google,maluri_covered.png,3/8/2026
+AMPANG PARK,PYL-KJL,yes,external,Google,ampangpark_covered.png,3/8/2026
+SUNGAI BESI,PYL-SPL,yes,internal,Google,sungaibesi_covered.png,3/8/2026
+TITIWANGSA,PYL-AGL-MRL,yes,internal,Google,titiwangsa_mrl2agl_covered/titiwangsa_pyl2agl_covered.png,3/8/2026
+PUTRA HEIGHTS,SPL-KJL,yes,internal,Maps,putraheights_covered.png,3/8/2026
+DANGWANGI-BUKITNANAS,MRL-KJL,yes,external,Google,dangwangi(bukitnanas)covered.png,3/8/2026
+KL SENTRAL,MRL-KJL-KGL,yes,internal,Google,klsentral(muziumnegara)_kgl2pjl_covered/klsentral_mrl2kjl_covered.png,3/8/2026
+MERDEKA-PLAZARAKYAT,KGL-SPL-AGL,yes,internal,Google,plazarakyat(merdeka)_covered.png,3/8/2026

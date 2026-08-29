@@ -1,0 +1,51 @@
+RAPID KL RAIL — FARE STRUCTURE OVERVIEW
+Source: Rapid Rail Sdn Bhd official fare tables (myrapid.com.my) and the
+Shah Alam Line fare structure announcement (June 2026).
+
+GENERAL FARE PRINCIPLES (all Rapid KL rail lines: LRT, MRT, Monorail, BRT, LRT3)
+- Fares are distance-based: the further you travel, the more you pay.
+- Three fare structures exist:
+  1. CASH / TOKEN fare — the highest price tier, paid at station counters or
+     ticket machines.
+  2. CASHLESS fare — cheaper than cash. Applies to Touch 'n Go cards,
+     concession-free stored value, and open payment (debit/credit cards).
+     Cashless is typically around 10-15% cheaper than the cash fare.
+  3. CONCESSION fare — roughly HALF the cashless fare. For eligible MyKad
+     holders: senior citizens, persons with disabilities (OKU), and students
+     with concession cards (e.g. Rapid Emas, student passes).
+- The core network is INTEGRATED: transferring between LRT (Kelana Jaya,
+  Ampang/Sri Petaling), MRT (Kajang, Putrajaya), Monorail and BRT within the
+  paid area is a single continuous fare — you do not pay twice.
+- EXCEPTION: the LRT Shah Alam Line (LRT3) is fare-wise separate — it has its
+  own published fare table and is not part of the 156-station integrated fare
+  matrix. A journey combining LRT3 with the rest of the network (e.g.
+  transferring at Bandar Utama) costs the LRT3 fare PLUS the integrated
+  network fare. The same payment methods (Touch 'n Go, open payment) are
+  accepted on both.
+- The minimum fare on the network starts from RM 0.80 (short cashless trips).
+- Monthly unlimited passes (My50 at RM50 for 30 days of unlimited Rapid KL
+  rail and bus travel) are usually cheaper than daily fares for regular
+  commuters. See the My50 FAQ document for eligibility.
+
+LRT SHAH ALAM LINE (LRT3) FARES — VERIFIED HEADLINE FIGURES
+- End-to-end, Bandar Utama to Johan Setia (the full 37.8 km line):
+  - Cash: RM 4.90
+  - Cashless: RM 4.30
+  - Concession: RM 2.40
+- Shortest trips (one station, e.g. Bandar Utama to Kayu Ara):
+  - Cash: RM 1.20 or less
+  - Cashless: from RM 0.80-1.10
+  - Concession: from RM 0.40-0.60
+- Example mid-distance trip, Bandar Utama to Stadium Shah Alam:
+  approximately RM 3.70 cash / RM 3.20 cashless / RM 1.80 concession.
+- LRT3 accepts the same payment media as the rest of the network: Touch 'n Go,
+  open payment, concession passes, and the My50 monthly pass are all valid.
+
+HOW TO GET AN EXACT FARE
+- Exact station-to-station fares are available in this knowledge base:
+  the RAPID KL INTEGRATED FARE TABLE document (all 156 integrated-network
+  stations, cash and cashless) and the LRT3 SHAH ALAM LINE FARE TABLE
+  document (all 20 LRT3 stations, cash, cashless and concession).
+- The same fares are also published in the official fare calculator at
+  myrapid.com.my (Rapid KL > Integrated Fare Table) and the MyRapid PULSE
+  app.
