@@ -195,6 +195,33 @@ def test_route_through_disruption_demoted_to_last():
     assert not any(rt.get("through_disruption") for rt in r2["routes"])
 
 
+def test_through_disruption_route_reports_real_walking_time():
+    # The through-route is copied field-by-field from the undisrupted result.
+    # Omitting transfer_minutes made walk_minutes fall back to 0, so a route
+    # with an interchange advertised "0 min walk".
+    r = reroute("16 SIERRA", "KELANA JAYA", disrupted_stops=["AG7", "KJ13", "SP7"])
+    through = next(rt for rt in r["routes"] if rt.get("through_disruption"))
+    assert through["interchanges"] >= 1
+    assert through["transfer_minutes"] > 0
+    assert through["walk_minutes"] > 0
+    assert "exposed_transfers" in through
+
+
+def test_walking_cap_never_promotes_the_disrupted_route():
+    # A cap tighter than every detour must NOT fall through to the route that
+    # passes through the confirmed-disrupted station — it stays demoted, and
+    # the user is told the cap could not be met instead.
+    for origin, dest in (("16 SIERRA", "KELANA JAYA"),
+                         ("KLCC", "HANG TUAH"),
+                         ("KELANA JAYA", "PUDU")):
+        r = reroute(origin, dest, disrupted_stops=["AG7", "KJ13", "SP7"],
+                    preferences={"max_walk_minutes": 5})
+        assert not r["routes"][0].get("through_disruption"), origin
+        assert r["walking_note"]["reason"] == "over_cap"
+        # the option is still offered, just never first
+        assert any(rt.get("through_disruption") for rt in r["routes"])
+
+
 def test_unresolvable_disrupted_tokens_reported_not_silently_avoided():
     r = reroute("KOTA DAMANSARA", "BUKIT BINTANG",
                 disrupted_stops=["KG 15", "muzium negra"])

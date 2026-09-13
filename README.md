@@ -117,7 +117,11 @@ Create `frontend/.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_CARTO_KEY=
 ```
+
+`NEXT_PUBLIC_CARTO_KEY` is a free basemap key from https://carto.com/basemaps/apikey.
+It is optional — without it the maps still render, with a CARTO watermark on the tiles.
 
 Open http://localhost:3000
 
@@ -166,15 +170,6 @@ scripts/          training, evaluation and preprocessing scripts
 ```
 
 ---
-
-## Data statement
-
-The raw scraped social-media corpus is retained locally and is **not redistributed** in this
-repository. The published dataset contains only the processed text, post identifiers and the
-assigned labels; author names, account identifiers, follower counts, profile metadata and
-direct post URLs have been removed in accordance with platform terms and standard research
-data-sharing practice. The preprocessing pipeline that produced this dataset is documented in
-`scripts/nlp_preprocessing.py` and in Section 3.4 of the project report.
 
 ## Further documentation
 

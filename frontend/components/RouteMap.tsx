@@ -9,6 +9,7 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { TILE_URL, TILE_ATTRIBUTION, TILE_SUBDOMAINS, TILE_MAX_ZOOM } from "@/lib/tiles";
 
 const LINE_COLOR: Record<string, string> = {
   KJ:  "#ef4444",
@@ -113,8 +114,10 @@ export default function RouteMap({ segments, disrupted_avoided, disrupted_points
       scrollWheelZoom={true}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        attribution={TILE_ATTRIBUTION}
+        url={TILE_URL}
+        subdomains={TILE_SUBDOMAINS}
+        maxZoom={TILE_MAX_ZOOM}
       />
 
       <FitBounds segments={segments} places={places} disruptedPoints={disrupted_points} />

@@ -977,10 +977,16 @@ def reroute(
                 normal_ids = {p["stop_id"] for seg in normal["segments"]
                               for p in seg["station_points"]}
                 if normal_ids & set(disrupted_stops):
+                    # transfer_minutes and exposed_transfers must be copied too:
+                    # walk_minutes is derived from transfer_minutes below, so
+                    # omitting it reported this option as 0 min of walking even
+                    # with an interchange — and a low walking cap then promoted
+                    # it above the genuine detours.
                     through = {k: normal[k] for k in
                                ("segments", "steps", "total_stops",
-                                "estimated_minutes", "interchanges",
-                                "lines_used", "instructions")}
+                                "estimated_minutes", "transfer_minutes",
+                                "interchanges", "lines_used",
+                                "exposed_transfers", "instructions")}
                     through["through_disruption"] = True
                     routes.append(through)
     except nx.NetworkXNoPath:
@@ -1101,11 +1107,18 @@ def reroute(
     cap = int(applied.get("max_walk_minutes") or 0)
     over_cap_note = None
     if cap > 0:
-        within = [r for r in routes if r.get("walk_minutes", 0) <= cap]
+        # The through-disruption option is demoted everywhere else and must not
+        # be promoted here: it is kept out of the cap comparison and re-appended
+        # last, so a tight cap can never recommend routing through a station
+        # already confirmed disrupted.
+        through = [r for r in routes if r.get("through_disruption")]
+        candidates = [r for r in routes if not r.get("through_disruption")]
+        within = [r for r in candidates if r.get("walk_minutes", 0) <= cap]
         if within:
-            routes[:] = within
-        else:
-            routes.sort(key=lambda r: r.get("walk_minutes", 0))
+            routes[:] = within + through
+        elif candidates:
+            candidates.sort(key=lambda r: r.get("walk_minutes", 0))
+            routes[:] = candidates + through
             over_cap_note = (
                 f"No route stays within ~{cap} min of walking — the least is "
                 f"~{routes[0].get('walk_minutes', 0)} min."

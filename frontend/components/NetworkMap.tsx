@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { getNetworkMap } from "@/lib/api";
+import { TILE_URL, TILE_ATTRIBUTION, TILE_SUBDOMAINS, TILE_MAX_ZOOM } from "@/lib/tiles";
 
 interface Station { stop_id: string; name: string; lat: number; lon: number; }
 interface Line { line_id: string; name: string; color: string; stations: Station[]; }
@@ -93,8 +94,10 @@ export default function NetworkMap() {
         <MapContainer center={[3.10, 101.65]} zoom={11}
           style={{ height: "100%", width: "100%", background: "#e8e8e8" }} scrollWheelZoom>
           <TileLayer
-            attribution='&copy; OpenStreetMap'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution={TILE_ATTRIBUTION}
+            url={TILE_URL}
+            subdomains={TILE_SUBDOMAINS}
+            maxZoom={TILE_MAX_ZOOM}
           />
           {shown.map((l) => {
             const pts = l.stations.map((s) => [s.lat, s.lon] as [number, number]);
