@@ -53,7 +53,7 @@ def test_supported_verdict_is_passed_through(no_network, monkeypatch):
     monkeypatch.setattr(ra.genai, "GenerativeModel",
                         _fake_model('{"verdict":"supported","unsupported":null}'))
     out = ra._verify_grounded("The My50 pass costs RM50.", CHUNKS)
-    assert out == {"verdict": "supported", "unsupported": None}
+    assert out["verdict"] == "supported" and out["unsupported"] is None
 
 
 def test_unsupported_verdict_reports_the_offending_sentence(no_network, monkeypatch):
@@ -85,8 +85,10 @@ def test_checker_failure_fails_open(no_network, monkeypatch):
         def generate_content(self, prompt, request_options=None):
             raise TimeoutError("deadline exceeded")
     monkeypatch.setattr(ra.genai, "GenerativeModel", lambda *a, **k: Boom())
-    assert ra._verify_grounded("The My50 pass costs RM50.", CHUNKS) == {
-        "verdict": "unchecked", "unsupported": None}
+    monkeypatch.setattr(ra, "_verify_call_groq",
+                        lambda p: (_ for _ in ()).throw(RuntimeError("no key")))
+    out = ra._verify_grounded("The My50 pass costs RM50.", CHUNKS)
+    assert out["verdict"] == "unchecked" and out["checked_by"] is None
 
 
 def test_a_refusal_is_not_sent_for_checking(no_network, monkeypatch):
@@ -185,3 +187,43 @@ def test_fare_answers_skip_verification_entirely(monkeypatch, no_network):
     assert out["mode"] == "fare_lookup"
     assert called == []
     assert "grounding" not in out or out.get("grounding") is None
+
+
+# ── two providers ────────────────────────────────────────────────────────────
+
+def test_falls_back_to_the_other_provider(no_network, monkeypatch):
+    """Gemini down must not mean unverified — Groq is asked instead.
+
+    This is the point of having two: quota on one provider ran the first
+    adversarial evaluation into the ground, and a verifier that dies with its
+    model is a verifier you cannot rely on.
+    """
+    class Boom:
+        def __init__(self, *a, **k): pass
+        def generate_content(self, prompt, request_options=None):
+            raise TimeoutError("deadline exceeded")
+    monkeypatch.setattr(ra.genai, "GenerativeModel", Boom)
+    monkeypatch.setattr(ra, "_verify_call_groq",
+                        lambda p: '{"verdict":"unsupported","unsupported":"RM80"}')
+    out = ra._verify_grounded("The My50 pass costs RM80.", CHUNKS)
+    assert out["verdict"] == "unsupported"
+    assert out["checked_by"] == "groq"
+
+
+def test_the_verdict_records_which_model_judged_it(no_network, monkeypatch):
+    """Without this the logs cannot tell a Gemini verdict from a Groq one, and
+    comparing the two providers becomes impossible after the fact."""
+    monkeypatch.setattr(ra.genai, "GenerativeModel",
+                        _fake_model('{"verdict":"supported","unsupported":null}'))
+    assert ra._verify_grounded("The My50 pass costs RM50.", CHUNKS)["checked_by"] == "gemini"
+
+
+def test_an_unusable_verdict_tries_the_other_provider(no_network, monkeypatch):
+    """A reply we cannot interpret is not a verdict — ask someone else before
+    giving up and serving the answer unchecked."""
+    monkeypatch.setattr(ra.genai, "GenerativeModel",
+                        _fake_model('{"verdict":"mostly true","unsupported":null}'))
+    monkeypatch.setattr(ra, "_verify_call_groq",
+                        lambda p: '{"verdict":"partial","unsupported":"a detail"}')
+    out = ra._verify_grounded("anything", CHUNKS)
+    assert out["verdict"] == "partial" and out["checked_by"] == "groq"

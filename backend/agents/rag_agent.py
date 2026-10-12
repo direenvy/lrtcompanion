@@ -43,6 +43,17 @@ REFUSAL = "I don't have that information in my knowledge base."
 # it fails OPEN, because a verifier outage turning every answer into a refusal
 # would be worse than the problem it guards against.
 VERIFY_TIMEOUT_SECONDS = 6
+
+# Which model judges the answer. Checking gemini-flash-lite's output with
+# gemini-flash-lite means a bias the generator has, the checker may share — and
+# no amount of testing can see that from the inside. Groq hosts a different
+# model family and already has a key here for Whisper, so an independent check
+# costs nothing but a setting. Whichever provider is configured, the other is
+# tried if it fails: that also means one provider's quota running out no longer
+# takes the check down with it.
+VERIFY_PROVIDER     = os.getenv("VERIFY_PROVIDER", "gemini").strip().lower()
+GROQ_VERIFY_MODEL   = os.getenv("GROQ_VERIFY_MODEL", "llama-3.3-70b-versatile")
+GROQ_CHAT_URL       = "https://api.groq.com/openai/v1/chat/completions"
 # Free-tier embed quota is PER MODEL and per day (each text in a batch counts
 # as one request), so the model choice doubles as the quota bucket. The build
 # checkpoints progress and resumes across days if the corpus outsizes a bucket.
@@ -435,6 +446,39 @@ def _correct_terms(question: str) -> tuple[str, list[tuple[str, str]]]:
     return corrected, fixes
 
 
+def _verify_call_gemini(prompt: str) -> str:
+    """Raw verification reply from Gemini. Raises on any failure."""
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    resp = model.generate_content(
+        prompt, request_options={"timeout": VERIFY_TIMEOUT_SECONDS})
+    return (resp.text or "").strip()
+
+
+def _verify_call_groq(prompt: str) -> str:
+    """Raw verification reply from a Groq-hosted model. Raises on any failure.
+
+    Same plain-HTTP pattern as the Whisper call in transcribe_agent — Groq's
+    endpoint is OpenAI-compatible, so this needs no extra dependency. Asking
+    for a JSON object up front removes the markdown-fence problem entirely.
+    """
+    import httpx
+    key = os.getenv("GROQ_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("GROQ_API_KEY not configured")
+    r = httpx.post(
+        GROQ_CHAT_URL,
+        headers={"Authorization": f"Bearer {key}"},
+        json={"model": GROQ_VERIFY_MODEL,
+              "messages": [{"role": "user", "content": prompt}],
+              "temperature": 0,                      # a verdict, not a draft
+              "response_format": {"type": "json_object"}},
+        timeout=VERIFY_TIMEOUT_SECONDS)
+    if r.status_code != 200:
+        raise RuntimeError(f"Groq HTTP {r.status_code}: {r.text[:160]}")
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
 def _verify_grounded(answer_text: str, chunks: list[dict]) -> dict:
     """Check a generated answer against the chunks it was supposed to come from.
 
@@ -456,10 +500,10 @@ def _verify_grounded(answer_text: str, chunks: list[dict]) -> dict:
     serving an answer that merely was not double-checked.
     """
     if not answer_text or not chunks:
-        return {"verdict": "unchecked", "unsupported": None}
+        return {"verdict": "unchecked", "unsupported": None, "checked_by": None}
     # A refusal has nothing to verify — it makes no claim about the world.
     if answer_text.strip().startswith(REFUSAL[:30]):
-        return {"verdict": "supported", "unsupported": None}
+        return {"verdict": "supported", "unsupported": None, "checked_by": None}
 
     context = "\n\n---\n\n".join(c.get("text", "") for c in chunks)
     prompt = f"""You are checking whether an answer is supported by source documents.
@@ -482,24 +526,33 @@ SOURCES:
 ANSWER TO CHECK:
 {answer_text}"""
 
-    try:
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        resp = model.generate_content(
-            prompt, request_options={"timeout": VERIFY_TIMEOUT_SECONDS})
-        raw = (resp.text or "").strip()
-        if raw.startswith("```"):                      # strip markdown fences
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        parsed = json.loads(raw.strip())
-        verdict = parsed.get("verdict")
-        if verdict not in ("supported", "partial", "unsupported"):
-            return {"verdict": "unchecked", "unsupported": None}
-        return {"verdict": verdict, "unsupported": parsed.get("unsupported") or None}
-    except Exception as e:
-        print(f"[RAG] grounding check unavailable ({type(e).__name__}) — serving unverified")
-        return {"verdict": "unchecked", "unsupported": None}
+    # Try the configured provider, then the other one. A verdict from either is
+    # worth more than no verdict, and the two failing together is rare enough
+    # that falling through to 'unchecked' stays honest.
+    order = (["groq", "gemini"] if VERIFY_PROVIDER == "groq" else ["gemini", "groq"])
+    callers = {"gemini": _verify_call_gemini, "groq": _verify_call_groq}
+
+    for provider in order:
+        try:
+            raw = callers[provider](prompt)
+            if raw.startswith("```"):                  # strip markdown fences
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            parsed = json.loads(raw.strip())
+            verdict = parsed.get("verdict")
+            if verdict not in ("supported", "partial", "unsupported"):
+                # A creative verdict is not a verdict. Try the other provider
+                # rather than trusting a reply we cannot interpret.
+                raise ValueError(f"unusable verdict {verdict!r}")
+            return {"verdict": verdict,
+                    "unsupported": parsed.get("unsupported") or None,
+                    "checked_by": provider}
+        except Exception as e:
+            print(f"[RAG] grounding check via {provider} failed ({type(e).__name__})")
+
+    print("[RAG] no verifier available — serving unverified")
+    return {"verdict": "unchecked", "unsupported": None, "checked_by": None}
 
 
 def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> dict:
@@ -619,7 +672,7 @@ Answer:"""
             answer = REFUSAL
             mode = f"{mode}_refused_on_verify"
     else:
-        grounding = {"verdict": "skipped", "unsupported": None}
+        grounding = {"verdict": "skipped", "unsupported": None, "checked_by": None}
 
     return {
         # Say what was silently changed. A corrected question that returns a

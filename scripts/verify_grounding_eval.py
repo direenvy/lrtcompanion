@@ -39,6 +39,7 @@ from pathlib import Path
 sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
+import agents.rag_agent as ra                   # noqa: E402
 from agents.rag_agent import _verify_grounded  # noqa: E402
 
 
@@ -191,7 +192,24 @@ def main():
     # a checker that missed everything. Pace the calls instead.
     ap.add_argument("--delay", type=float, default=4.5,
                     help="seconds between calls (default 4.5, ~13/min)")
+    # Checking gemini-flash-lite's output with gemini-flash-lite cannot reveal a
+    # bias the two share. Running the set through both and comparing is the only
+    # way to see that from outside — and the cases they disagree on are the
+    # genuinely ambiguous ones, which is a result in itself.
+    ap.add_argument("--provider", choices=["gemini", "groq"],
+                    help="force the verifying model (default: VERIFY_PROVIDER)")
     args = ap.parse_args()
+    if args.provider:
+        ra.VERIFY_PROVIDER = args.provider
+        # Pin it: without this the other provider answers whenever the forced
+        # one errors, and the run silently stops being a test of one model.
+        other = "groq" if args.provider == "gemini" else "gemini"
+        setattr(ra, f"_verify_call_{other}",
+                lambda prompt: (_ for _ in ()).throw(
+                    RuntimeError(f"{other} disabled by --provider")))
+        print(f"verifying with: {args.provider}")
+        print()
+
     cases = [c for c in CASES if not args.only or c[0] == args.only]
     if not cases:
         print(f"no cases in category {args.only!r}")
