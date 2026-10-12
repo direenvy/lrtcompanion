@@ -31,6 +31,18 @@ CACHE_PATH = (
 )
 
 GEMINI_MODEL   = "models/gemini-flash-lite-latest"
+
+# The single refusal sentence. Named because three places must agree on it:
+# the generation prompt, the verification pass that replaces an unsupported
+# answer, and the tests. If they drift, a refusal stops being recognisable.
+REFUSAL = "I don't have that information in my knowledge base."
+
+# Second-pass grounding check. The generation prompt ASKS the model to answer
+# only from context; this CHECKS that it did. Kept deliberately cheap: it is a
+# yes/no judgement on text already in hand, so a short timeout is right — and
+# it fails OPEN, because a verifier outage turning every answer into a refusal
+# would be worse than the problem it guards against.
+VERIFY_TIMEOUT_SECONDS = 6
 # Free-tier embed quota is PER MODEL and per day (each text in a batch counts
 # as one request), so the model choice doubles as the quota bucket. The build
 # checkpoints progress and resumes across days if the corpus outsizes a bucket.
@@ -423,6 +435,73 @@ def _correct_terms(question: str) -> tuple[str, list[tuple[str, str]]]:
     return corrected, fixes
 
 
+def _verify_grounded(answer_text: str, chunks: list[dict]) -> dict:
+    """Check a generated answer against the chunks it was supposed to come from.
+
+    The generation prompt asks the model to use only the retrieved context.
+    This asks a second time whether it actually did — which is the difference
+    between a claim that has to be hedged ("the refusal is prompt-enforced")
+    and one that can be defended ("unsupported answers are replaced").
+
+    Returns {"verdict": ..., "unsupported": <sentence> | None} where verdict is
+      supported   — every claim follows from the context
+      partial     — mostly grounded, one claim is not; the answer is kept and
+                    the offending sentence is reported rather than discarded
+      unsupported — the central claim is absent from the context
+      unchecked   — the check itself could not run (see fail-open below)
+
+    FAILS OPEN. A timeout, a quota error or an unparseable reply returns
+    'unchecked' and leaves the answer alone. Failing closed would convert any
+    Gemini outage into a total refusal of service, which is strictly worse than
+    serving an answer that merely was not double-checked.
+    """
+    if not answer_text or not chunks:
+        return {"verdict": "unchecked", "unsupported": None}
+    # A refusal has nothing to verify — it makes no claim about the world.
+    if answer_text.strip().startswith(REFUSAL[:30]):
+        return {"verdict": "supported", "unsupported": None}
+
+    context = "\n\n---\n\n".join(c.get("text", "") for c in chunks)
+    prompt = f"""You are checking whether an answer is supported by source documents.
+
+Reply with ONLY valid JSON: {{"verdict": "...", "unsupported": "..."}}
+
+verdict must be exactly one of:
+  "supported"   - every factual claim in the answer appears in the sources
+  "partial"     - the main claim is supported but one detail is not
+  "unsupported" - the main claim does not appear in the sources at all
+
+Judge meaning, not wording. A paraphrase of the sources is supported.
+A number, date, price or name that differs from the sources is NOT supported.
+Formatting, markdown and politeness are not claims — ignore them.
+Set "unsupported" to the exact sentence that is not supported, or null.
+
+SOURCES:
+{context}
+
+ANSWER TO CHECK:
+{answer_text}"""
+
+    try:
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        resp = model.generate_content(
+            prompt, request_options={"timeout": VERIFY_TIMEOUT_SECONDS})
+        raw = (resp.text or "").strip()
+        if raw.startswith("```"):                      # strip markdown fences
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        parsed = json.loads(raw.strip())
+        verdict = parsed.get("verdict")
+        if verdict not in ("supported", "partial", "unsupported"):
+            return {"verdict": "unchecked", "unsupported": None}
+        return {"verdict": verdict, "unsupported": parsed.get("unsupported") or None}
+    except Exception as e:
+        print(f"[RAG] grounding check unavailable ({type(e).__name__}) — serving unverified")
+        return {"verdict": "unchecked", "unsupported": None}
+
+
 def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> dict:
     """
     Answer a question using RAG retrieval + Gemini generation.
@@ -483,7 +562,7 @@ def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> 
     model = genai.GenerativeModel(GEMINI_MODEL)
     prompt = f"""You are an AI assistant for Rapid KL / Prasarana LRT services in Malaysia.
 Answer the user's question using ONLY the context below.
-If the answer is not in the context, say "I don't have that information in my knowledge base."
+If the answer is not in the context, say "{REFUSAL}"
 
 Answer format rules (the app serves commuters of all ages, including elderly users):
 - Lead with the direct answer in the FIRST sentence — no preamble, no restating the question.
@@ -522,6 +601,26 @@ Answer:"""
         answer = _extractive_answer(question, top_chunks)
         mode = f"{mode}_extractive"
 
+    # Verify only what a model actually wrote. The extractive fallback IS the
+    # source text, and the fare path returned long before this — neither can
+    # drift from its source, so neither is worth a second API call.
+    if mode.startswith("semantic") and not mode.endswith("_extractive"):
+        grounding = _verify_grounded(answer, top_chunks)
+        # 'partial' refuses as well as 'unsupported'. A partial answer is one
+        # whose MAIN claim checks out but which carries an unverified detail —
+        # a changed duration, an invented discount. In a domain where someone
+        # acts on the number, a mostly-right answer is the dangerous kind: it
+        # reads as authoritative. The cost is a higher refusal rate, which is
+        # measurable; the cost of the alternative is a commuter acting on a
+        # detail no source supports.
+        if grounding["verdict"] in ("unsupported", "partial"):
+            print(f"[RAG] grounding check returned '{grounding['verdict']}' — refusing: "
+                  f"{grounding.get('unsupported') or 'main claim unsupported'}")
+            answer = REFUSAL
+            mode = f"{mode}_refused_on_verify"
+    else:
+        grounding = {"verdict": "skipped", "unsupported": None}
+
     return {
         # Say what was silently changed. A corrected question that returns a
         # confident answer about a DIFFERENT product is worse than a refusal
@@ -534,4 +633,8 @@ Answer:"""
         "chunks_used": top_k,
         "mode":        mode,
         "corrections": _corrections,
+        # Exposed so the verdict is visible in the API response and loggable —
+        # a groundedness distribution is the project's first quantitative RAG
+        # metric, and it costs nothing once the check is running.
+        "grounding":   grounding,
     }
