@@ -171,3 +171,54 @@ def test_similarity_dedup_does_not_defeat_a_varied_attacker(monkeypatch):
         _row("kampung baru LRT breakdown, service completely stopped"),
     ], monkeypatch)
     assert out["lines"]["KJ"]["status"] == "disrupted"
+
+
+# ── semantic deduplication (opt-in) ──────────────────────────────────────────
+
+def test_semantic_dedup_is_off_by_default(monkeypatch):
+    """It must stay off unless asked for: it costs an embedding call on a hot
+    path, and it changes how much evidence a confirmation needs."""
+    assert dash.SEMANTIC_DEDUP is False
+    called = []
+    monkeypatch.setattr(dash, "_embed_report", lambda t: called.append(t) or None)
+    _status_with([_row("kampung baru lrt down"),
+                  _row("kampung baru lrt not working")], monkeypatch)
+    assert called == []
+
+
+def test_semantic_dedup_merges_what_tokens_cannot(monkeypatch):
+    """The pair that motivated this: one event, two phrasings sharing almost no
+    words. Lexically they score 54 and count twice; semantically 0.894."""
+    monkeypatch.setattr(dash, "SEMANTIC_DEDUP", True)
+    monkeypatch.setattr(dash, "_semantically_same",
+                        lambda a, b: True)       # stand in for the real cosine
+    out = _status_with([
+        _row("train broke down at kampung baru, everyone is stuck on the platform"),
+        _row("kampung baru LRT breakdown, service completely stopped"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "unconfirmed"
+
+
+def test_semantic_dedup_falls_back_when_embeddings_are_down(monkeypatch):
+    """An embedding outage must not take corroboration with it — the lexical
+    rule still applies and the board keeps working."""
+    monkeypatch.setattr(dash, "SEMANTIC_DEDUP", True)
+    monkeypatch.setattr(dash, "_embed_report", lambda t: None)   # API unavailable
+    out = _status_with([
+        _row("kelana jaya line down at kampung baru"),
+        _row("KJ line stuck, train not moving near kampung baru station"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "disrupted"
+
+
+def test_lexical_match_short_circuits_before_any_embedding_call(monkeypatch):
+    """Most duplicates are caught by tokens. Spending an embedding call on them
+    would make the hot path cost far more than it needs to."""
+    monkeypatch.setattr(dash, "SEMANTIC_DEDUP", True)
+    called = []
+    monkeypatch.setattr(dash, "_embed_report", lambda t: called.append(t) or None)
+    _status_with([
+        _row("stuck at kampung baru for 30 minutes, no announcement"),
+        _row("no announcement, been stuck at kampung baru 30 minutes"),
+    ], monkeypatch)
+    assert called == []

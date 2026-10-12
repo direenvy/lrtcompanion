@@ -117,11 +117,76 @@ def fetch_rows(limit: int) -> list[dict]:
         return []
 
 
+# A real pair from the log audit: one official announcement posted in Malay and
+# English, one second apart. It shares almost no tokens, so the lexical rule
+# counts it twice — the clearest case for a semantic layer.
+BILINGUAL = ("kelewatan tren: laluan kelana jaya untuk ke putra heights",
+             "train delay: kelana jaya line please be informed towards putra heights")
+
+
+def run_semantic():
+    """Score every intent pair by embedding cosine and suggest a threshold."""
+    sys.path.insert(0, str(ROOT / "backend"))
+    from agents.rag_agent import _cosine, EMBED_MODEL
+    import google.generativeai as genai
+    import os as _os
+    genai.configure(api_key=_os.getenv("GEMINI_API_KEY"))
+
+    cache: dict = {}
+
+    def emb(t: str):
+        if t not in cache:
+            r = genai.embed_content(model=EMBED_MODEL, content=t,
+                                    task_type="semantic_similarity",
+                                    request_options={"timeout": 20})
+            cache[t] = r["embedding"]
+        return cache[t]
+
+    def score(a, b):
+        return _cosine(emb(norm(a)), emb(norm(b)))
+
+    print("SEMANTIC — embedding cosine for each pair")
+    print(f"{'want':<10}{'cos':<9}pair")
+    print("-" * 86)
+    merge_scores, sep_scores = [], []
+    for a, b in SHOULD_MERGE + [BILINGUAL]:
+        c = score(a, b)
+        merge_scores.append(c)
+        print(f"{'merge':<10}{c:<9.3f}{a[:60]}")
+    for a, b in SHOULD_SEPARATE:
+        c = score(a, b)
+        sep_scores.append(c)
+        print(f"{'separate':<10}{c:<9.3f}{a[:60]}")
+
+    lo_merge, hi_sep = min(merge_scores), max(sep_scores)
+    print()
+    print(f"lowest should-merge   {lo_merge:.3f}")
+    print(f"highest should-separate {hi_sep:.3f}")
+    if lo_merge > hi_sep:
+        suggested = round((lo_merge + hi_sep) / 2, 2)
+        print(f"-> the two groups separate cleanly. Any threshold between them works;")
+        print(f"   the midpoint is {suggested}. Prefer nearer the upper end: merging")
+        print(f"   too eagerly costs real corroboration, which is the worse error.")
+    else:
+        print("-> the groups OVERLAP. No cosine threshold separates them either, so")
+        print("   embeddings do not close this gap any more than tokens did. Say so")
+        print("   rather than picking a number that looks decisive.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=1000,
                     help="how many recent rows to replay (default 1000)")
+    # Lexical matching cannot see across languages or through a full rewrite.
+    # This mode scores the same pairs by embedding cosine instead, including a
+    # bilingual pair taken from the real log, so the semantic threshold is
+    # chosen against the case that motivated it.
+    ap.add_argument("--semantic", action="store_true",
+                    help="score pairs by embedding cosine instead of tokens")
     args = ap.parse_args()
+
+    if args.semantic:
+        return run_semantic()
 
     print("INTENT — does the threshold do what it is meant to?")
     print(f"{'thresh':<9}{'rewordings merged':<22}{'distinct kept apart':<22}note")

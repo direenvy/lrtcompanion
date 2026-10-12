@@ -1,4 +1,5 @@
 import csv
+import os
 import re
 import time
 from pathlib import Path
@@ -184,6 +185,37 @@ EXTERNAL_WEIGHT  = 0.4
 # Semantic similarity over embeddings would catch the 54-point pair, at the cost
 # of an embedding call per report inside the request path.
 DEDUP_SIMILARITY = 75
+
+# Semantic merging, layered on top of the lexical rule above. Lexical
+# similarity can only match reports that reuse words, which the log audit
+# showed is not enough: the same official announcement posted in Malay and
+# English, one second apart, shares no tokens and counts twice. Embeddings
+# place translations and paraphrases close together, so they catch exactly the
+# pairs token matching cannot.
+#
+# 0.84, measured by scripts/tune_corroboration_similarity.py --semantic. On the
+# tuned pairs the two groups do separate — should-merge runs 0.849 to 0.986,
+# should-separate tops out at 0.832 — but the gap is only 0.017 wide and rests
+# on nine pairs. Treat it as provisional: these are short formulaic sentences,
+# so any two transport complaints already sit close together, and a wider set
+# could easily close that margin. Re-measure before trusting it further.
+#
+# OFF unless CORROBORATION_SEMANTIC_DEDUP=1, for two reasons.
+#
+# Cost: one embedding call per distinct report inside a dashboard read, and
+# that read runs every 30 seconds from every open client. The lexical rule
+# catches most duplicates first, so this only runs on what survives it, and
+# results are cached by text — but it is still an API call on a hot path.
+#
+# Behaviour: it is strong enough to merge the two reports used in the demo
+# script, which score 0.894. With this enabled those two count as ONE signal,
+# the station stays amber, and the rerouting demo does not fire. That is the
+# feature working correctly — they are one event described twice — but it is a
+# deliberate change to how much evidence confirmation needs, not a free win.
+SEMANTIC_DEDUP      = os.getenv("CORROBORATION_SEMANTIC_DEDUP", "0").strip() == "1"
+SEMANTIC_SIMILARITY = float(os.getenv("CORROBORATION_SEMANTIC_THRESHOLD", "0.84"))
+_EMBED_CACHE: dict[str, list[float]] = {}
+_EMBED_CACHE_MAX = 2000
 INTERNAL_SOURCES = {"user", "voice"}        # deliberate in-app/voice reports → 1.0
 OFFICIAL_SOURCES = {"x_official"}           # official Rapid KL announcement → authoritative
 
@@ -206,6 +238,41 @@ def _signal_weight(text_to_source: dict[str, str]) -> float:
     return sum(_source_weight(src) for src in text_to_source.values())
 
 
+def _embed_report(text: str) -> list[float] | None:
+    """Embedding for one report text, cached. None if embedding is unavailable.
+
+    Returning None rather than raising matters: corroboration must keep working
+    when the embedding API is down, falling back to the lexical rule. A dedup
+    layer that takes the status board with it would be worse than no layer.
+    """
+    if text in _EMBED_CACHE:
+        return _EMBED_CACHE[text]
+    try:
+        import google.generativeai as genai
+        from agents.rag_agent import EMBED_MODEL
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        r = genai.embed_content(model=EMBED_MODEL, content=text,
+                                task_type="semantic_similarity",
+                                request_options={"timeout": 8})
+        vec = r["embedding"]
+    except Exception as e:
+        print(f"[Corroboration] embedding unavailable ({type(e).__name__}) — lexical only")
+        return None
+    if len(_EMBED_CACHE) >= _EMBED_CACHE_MAX:
+        _EMBED_CACHE.clear()          # crude, but this is a bounded side cache
+    _EMBED_CACHE[text] = vec
+    return vec
+
+
+def _semantically_same(a: str, b: str) -> bool:
+    """True when two reports mean the same thing despite sharing no words."""
+    va, vb = _embed_report(a), _embed_report(b)
+    if va is None or vb is None:
+        return False                   # unavailable → defer to the lexical rule
+    from agents.rag_agent import _cosine
+    return _cosine(va, vb) >= SEMANTIC_SIMILARITY
+
+
 def _merge_key(norm_text: str, seen: dict[str, str]) -> str:
     """Key this report under an existing near-identical one, or under itself.
 
@@ -221,6 +288,15 @@ def _merge_key(norm_text: str, seen: dict[str, str]) -> str:
     for existing in seen:
         if fuzz.token_set_ratio(norm_text, existing) >= DEDUP_SIMILARITY:
             return existing
+    # Lexical matching found nothing. Only now spend an embedding call — most
+    # duplicates are caught above, so this runs on the minority of reports that
+    # reach it, and the cache makes a repeat free.
+    if SEMANTIC_DEDUP:
+        for existing in seen:
+            if _semantically_same(norm_text, existing):
+                print(f"[Corroboration] merged semantically: {norm_text[:40]!r} "
+                      f"~ {existing[:40]!r}")
+                return existing
     return norm_text
 
 
