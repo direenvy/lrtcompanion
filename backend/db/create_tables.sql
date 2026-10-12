@@ -13,9 +13,17 @@ create table if not exists chat_logs (
   id         bigserial primary key,
   question   text,
   answer     text,
-  mode       text,   -- 'keyword' or 'semantic'
+  mode       text,   -- 'keyword' | 'semantic' | 'semantic_pgvector' | 'fare_lookup'
+  -- Verification verdict for this answer: supported | partial | unsupported |
+  -- unchecked (the checker could not run) | skipped (no model was involved).
+  -- Nullable: rows written before the check existed stay NULL rather than
+  -- being backfilled with a guess.
+  grounding  text,
   created_at timestamptz default now()
 );
+
+-- Existing deployments: add the column without touching the rows already there.
+alter table chat_logs add column if not exists grounding text;
 
 create table if not exists feedback_logs (
   id         bigserial primary key,

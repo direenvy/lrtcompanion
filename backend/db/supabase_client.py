@@ -60,15 +60,31 @@ def log_disruption(text: str, sentiment: str, issue_type: str, disruption_alert:
         print(f"[Supabase] log_disruption failed: {e}")
 
 
-def log_chat(question: str, answer: str, mode: str):
+def log_chat(question: str, answer: str, mode: str, grounding: str | None = None):
+    """grounding: the verification verdict for this answer — 'supported',
+    'partial', 'unsupported', 'unchecked' or 'skipped'. Accumulating it turns a
+    one-off adversarial test into an ongoing groundedness measurement."""
     try:
         sb = _get_client()
         if sb:
-            sb.table("chat_logs").insert({
+            row = {
                 "question": question[:500],
                 "answer":   answer[:2000],
                 "mode":     mode,
-            }).execute()
+            }
+            if grounding:
+                row["grounding"] = grounding
+            try:
+                sb.table("chat_logs").insert(row).execute()
+            except Exception:
+                # The grounding column is newer than this table. Rather than
+                # lose the whole log row on a schema that predates it, drop the
+                # field and retry — see db/create_tables.sql for the migration.
+                if "grounding" not in row:
+                    raise
+                row.pop("grounding")
+                sb.table("chat_logs").insert(row).execute()
+                print("[Supabase] chat_logs has no 'grounding' column — logged without it")
     except Exception as e:
         print(f"[Supabase] log_chat failed: {e}")
 

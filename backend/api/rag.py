@@ -27,8 +27,11 @@ def chat(request: RAGRequest):
     history = [h.dict() for h in request.history] if request.history else None
     result = answer(request.question, top_k=request.top_k, history=history)
 
-    # Log to Supabase (non-blocking — ignore errors)
-    log_chat(request.question, result.get("answer", ""), result.get("mode", "keyword"))
+    # Log to Supabase (non-blocking — ignore errors). The grounding verdict is
+    # stored alongside the answer so the refusal rate can be measured on real
+    # traffic rather than inferred from the adversarial set.
+    log_chat(request.question, result.get("answer", ""), result.get("mode", "keyword"),
+             grounding=(result.get("grounding") or {}).get("verdict"))
 
     return result
 
