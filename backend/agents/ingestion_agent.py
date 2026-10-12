@@ -144,6 +144,8 @@ def fetch_x(since_id: str | None = None) -> list[dict]:
                 detail = ""
             if e.code == 429:
                 raise RateLimited("X API rate limit (HTTP 429)") from e
+            if e.code == 400 and "since_id" in detail:
+                raise StaleCursor(detail) from e
             if e.code in RETRY_STATUSES and attempt < len(RETRY_BACKOFF_SECONDS):
                 _sleep(RETRY_BACKOFF_SECONDS[attempt])
                 continue
@@ -167,6 +169,31 @@ def fetch_x(since_id: str | None = None) -> list[dict]:
 
 class RateLimited(Exception):
     pass
+
+
+class StaleCursor(RuntimeError):
+    """since_id is older than X's 7-day recent-search window.
+
+    X rejects such a cursor with HTTP 400 rather than ignoring it, so the
+    stored newest_id has to be dropped — otherwise every later poll resends
+    the same dead id and ingestion never recovers from a gap of over a week.
+    Subclasses RuntimeError so it is still handled as a poll failure if the
+    recovery in _fetch_with_cursor_reset is ever removed.
+    """
+
+
+def _fetch_with_cursor_reset(state: dict) -> list[dict]:
+    """fetch_x, recovering once from a cursor X no longer accepts.
+
+    Mutates state["newest_id"] to None on reset; the caller persists state on
+    every path, so the dead cursor is cleared even if the retry itself fails.
+    """
+    try:
+        return fetch_x(since_id=state.get("newest_id"))
+    except StaleCursor as e:
+        print(f"[Ingest] since_id stale, dropping cursor and refetching: {e}")
+        state["newest_id"] = None
+        return fetch_x(since_id=None)
 
 
 def _append_labelling_rows(rows: list[dict]) -> None:
@@ -199,7 +226,7 @@ def run_pull() -> dict:
         now_iso = datetime.now(timezone.utc).isoformat()
 
         try:
-            posts = fetch_x(since_id=state.get("newest_id"))
+            posts = _fetch_with_cursor_reset(state)
         except RateLimited as e:
             state["last_poll"] = now_iso
             state["last_result"] = "rate_limited"

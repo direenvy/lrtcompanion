@@ -199,3 +199,79 @@ def test_author_expansion_requested(ingest_env, monkeypatch):
     ia.run_pull()
     assert "author_id" in seen["url"]        # expansions=author_id
     assert "username" in seen["url"]         # user.fields=username
+
+
+# ── Stale since_id recovery ──────────────────────────────────────────────────
+# X's recent-search window is 7 days. A cursor older than that is REJECTED with
+# HTTP 400, not ignored, so without recovery the same dead id is resent on every
+# poll and ingestion stalls permanently after any gap of over a week.
+
+STALE_SINCE_ID_BODY = (
+    b'{"detail":"One or more parameters to your request was invalid.",'
+    b'"errors":[{"message":"\'since_id\' must be a tweet id created after '
+    b'2026-10-05T10:18Z.","parameters":{"since_id":["2106294786084978930"]}}]}'
+)
+
+
+class _Body:
+    """Minimal stand-in for the file-like object on an HTTPError."""
+    def __init__(self, blob): self._blob = blob
+    def read(self): return self._blob
+
+
+def test_stale_since_id_clears_cursor_and_refetches(ingest_env, monkeypatch):
+    """A 400 naming since_id drops the cursor and retries without it, in one poll."""
+    ia._save_state({"seen_ids": [], "newest_id": "2106294786084978930",
+                    "last_poll": None, "last_result": None,
+                    "tweets_scanned": 0, "alerts_raised": 0})
+    calls = []
+
+    def stale_then_ok(url, headers):
+        calls.append(url)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(
+                url, 400, "Bad Request", {}, _Body(STALE_SINCE_ID_BODY))
+        return FAKE_TWEETS
+    monkeypatch.setattr(ia, "_http_get_json", stale_then_ok)
+
+    summary = ia.run_pull()
+    assert summary["status"] == "ok" and summary["scanned"] == 2
+    assert len(calls) == 2
+    assert "since_id" in calls[0]            # first attempt sent the dead cursor
+    assert "since_id" not in calls[1]        # retry dropped it
+    assert ia._load_state()["newest_id"] == "1002"   # advanced to the newest post
+
+
+def test_stale_cursor_cleared_even_when_the_retry_fails(ingest_env, monkeypatch):
+    """The dead cursor must not survive a failed retry, or the next poll stalls too."""
+    ia._save_state({"seen_ids": [], "newest_id": "2106294786084978930",
+                    "last_poll": None, "last_result": None,
+                    "tweets_scanned": 0, "alerts_raised": 0})
+
+    def stale_then_down(url, headers):
+        if "since_id" in url:
+            raise urllib.error.HTTPError(
+                url, 400, "Bad Request", {}, _Body(STALE_SINCE_ID_BODY))
+        raise urllib.error.HTTPError(url, 503, "Service Unavailable", {}, None)
+    monkeypatch.setattr(ia, "_http_get_json", stale_then_down)
+
+    summary = ia.run_pull()
+    assert summary["status"] == "error"          # reported, never raised
+    assert ia._load_state()["newest_id"] is None  # cursor gone → next poll recovers
+
+
+def test_other_400s_are_not_treated_as_a_stale_cursor(ingest_env, monkeypatch):
+    """A malformed query is a real error — it must not silently drop the cursor."""
+    ia._save_state({"seen_ids": [], "newest_id": "1500",
+                    "last_poll": None, "last_result": None,
+                    "tweets_scanned": 0, "alerts_raised": 0})
+
+    def bad_query(url, headers):
+        raise urllib.error.HTTPError(
+            url, 400, "Bad Request", {},
+            _Body(b'{"errors":[{"message":"Invalid query"}]}'))
+    monkeypatch.setattr(ia, "_http_get_json", bad_query)
+
+    summary = ia.run_pull()
+    assert summary["status"] == "error"
+    assert ia._load_state()["newest_id"] == "1500"   # cursor preserved
