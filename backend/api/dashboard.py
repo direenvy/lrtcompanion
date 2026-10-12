@@ -158,6 +158,32 @@ _STATION_NAMES, _CONDITIONAL_STATION_NAMES, _STATION_STOP_IDS = _load_station_st
 # the in-app/demo path responsive and preserving anti-griefing (needs 2 people).
 CONFIRM_WEIGHT   = 2.0
 EXTERNAL_WEIGHT  = 0.4
+
+# Two reports count separately only if they are actually different reports.
+# Exact-match deduplication meant rewording the same claim produced free
+# corroboration weight — "train broke down at X" and "X breakdown, service
+# stopped" are one person's two sentences, not two witnesses, and together
+# they reach CONFIRM_WEIGHT. Similarity matching raises that floor without
+# needing identity, which this system deliberately does not collect.
+#
+# 75 is measured, not guessed — see scripts/tune_corroboration_similarity.py,
+# which scores known rewordings against known-distinct reports. It is the
+# highest cut-off that merges every reordered phrasing while merging no pair
+# that genuinely differs; above it merging drops for no gain.
+#
+# Be clear about what this does NOT do. Lexical similarity only catches reports
+# that reuse vocabulary. "Train broke down at X, everyone is stuck" and
+# "X breakdown, service completely stopped" describe one event in two ways and
+# score 54 — below any usable threshold, because they share almost no words.
+# A distinct report at the same station ("X escalator not working") scores 55.
+# Those distributions overlap, so no threshold separates them: this stops
+# careless repetition, not a deliberate attacker who varies wording.
+#
+# The real fix is per-user weighting, which this system cannot do because it
+# stores no identifier — the same privacy decision that makes the gap possible.
+# Semantic similarity over embeddings would catch the 54-point pair, at the cost
+# of an embedding call per report inside the request path.
+DEDUP_SIMILARITY = 75
 INTERNAL_SOURCES = {"user", "voice"}        # deliberate in-app/voice reports → 1.0
 OFFICIAL_SOURCES = {"x_official"}           # official Rapid KL announcement → authoritative
 
@@ -180,6 +206,24 @@ def _signal_weight(text_to_source: dict[str, str]) -> float:
     return sum(_source_weight(src) for src in text_to_source.values())
 
 
+def _merge_key(norm_text: str, seen: dict[str, str]) -> str:
+    """Key this report under an existing near-identical one, or under itself.
+
+    Returns the key to store against. A report similar enough to one already
+    counted for this station reuses that key, so it overwrites rather than adds
+    — which is what stops a reworded claim earning a second helping of weight.
+
+    token_set_ratio rather than plain ratio: word order and filler differ freely
+    between two phrasings of the same complaint ("stuck at X, train broke down"
+    vs "train broke down at X and we are stuck"), and those are the same report.
+    """
+    from rapidfuzz import fuzz
+    for existing in seen:
+        if fuzz.token_set_ratio(norm_text, existing) >= DEDUP_SIMILARITY:
+            return existing
+    return norm_text
+
+
 def _derive_station_disruptions(all_alerts: list[dict],
                                 cutoff_30m: str) -> tuple[list[dict], list[dict]]:
     """Split stations named in red-window alerts into corroborated
@@ -197,10 +241,13 @@ def _derive_station_disruptions(all_alerts: list[dict],
                 "name": name.upper(), "stop_ids": stop_ids,
                 "last_alert_at": row["created_at"], "text_src": {}, "sources": set(),
             })
-            # keep the most trusted source seen for each distinct text
-            prev = entry["text_src"].get(norm_text)
+            # Keep the most trusted source seen for each distinct report. The
+            # key is the first phrasing of a near-identical group, so a reworded
+            # repeat lands on the same key and replaces rather than adds.
+            key = _merge_key(norm_text, entry["text_src"])
+            prev = entry["text_src"].get(key)
             if prev is None or _source_weight(src) > _source_weight(prev):
-                entry["text_src"][norm_text] = src
+                entry["text_src"][key] = src
             entry["sources"].add(src)
             if row["created_at"] > entry["last_alert_at"]:
                 entry["last_alert_at"] = row["created_at"]
@@ -448,9 +495,13 @@ def get_line_status():
         for r in recent_alerts:
             nt = " ".join((r.get("text") or "").lower().split())
             src = r.get("source", "user")
-            prev = text_src.get(nt)
+            # Same near-duplicate merge as the station tier. Both must apply:
+            # a line can be reddened without any station being named, so
+            # deduplicating only at station level would leave this path open.
+            key = _merge_key(nt, text_src)
+            prev = text_src.get(key)
             if prev is None or _source_weight(src) > _source_weight(prev):
-                text_src[nt] = src
+                text_src[key] = src
         weight = _signal_weight(text_src)
 
         if weight >= CONFIRM_WEIGHT:

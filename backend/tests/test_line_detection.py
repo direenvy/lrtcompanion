@@ -163,9 +163,15 @@ def test_source_weight_hierarchy():
 
 
 def test_five_distinct_tweets_needed_without_official_or_inapp():
-    # 4 tweets = 1.6 < 2.0 (advisory); the 5th crosses the threshold
-    four = [_alert(f"kampung baru rosak report {i}", source="x_live")
-            for i in range(4)]
+    # 4 tweets = 1.6 < 2.0 (advisory); the 5th crosses the threshold.
+    # Genuinely different sentences, not one template numbered 0..3 — near
+    # duplicates now merge into a single signal, which is the point of the rule.
+    four = [
+        _alert("kampung baru rosak lagi pagi ni", source="x_live"),
+        _alert("stuck outside kampung baru, nothing moving", source="x_live"),
+        _alert("why is kampung baru closed again", source="x_live"),
+        _alert("no trains calling at kampung baru right now", source="x_live"),
+    ]
     blocked, advisory = _derive_station_disruptions(four, CUTOFF)
     assert blocked == [] and len(advisory) == 1
 

@@ -63,10 +63,17 @@ def test_two_tweets_still_not_enough(monkeypatch):
 
 
 def test_five_tweets_confirm_disruption(monkeypatch):
-    # ~5 distinct external tweets (5 * 0.4 = 2.0) reach the confirm threshold
+    # ~5 distinct external tweets (5 * 0.4 = 2.0) reach the confirm threshold.
+    # These must be genuinely different sentences: the earlier fixture numbered
+    # one template 0..4, which near-duplicate dedup now correctly collapses to a
+    # single signal. Five near-identical posts ARE spam, so the fixture was
+    # wrong, not the rule.
     out = _status_with([
-        _row(f"kelana jaya line problem number {i}", source="x_live")
-        for i in range(5)
+        _row("kelana jaya line delayed again this morning", source="x_live"),
+        _row("why is KJ so packed today, waited three trains", source="x_live"),
+        _row("tren KJ tergendala, ramai tunggu kat platform", source="x_live"),
+        _row("another signalling fault on the kelana jaya route", source="x_live"),
+        _row("KJ line crawling, forty minutes late to work", source="x_live"),
     ], monkeypatch)
     assert out["lines"]["KJ"]["status"] == "disrupted"
 
@@ -103,3 +110,64 @@ def test_source_weight_hierarchy():
     assert _source_weight("user") == 1.0                    # two in-app confirm
     assert _source_weight("voice") == 1.0
     assert _source_weight("x_live") < 1.0                   # several tweets needed
+
+
+# ── near-duplicate deduplication ─────────────────────────────────────────────
+# Exact-match dedup meant one person could reword a claim and earn a second
+# helping of corroboration weight. Similarity matching raises that floor — but
+# only for reports that reuse vocabulary, which these tests pin precisely so
+# nobody later mistakes it for a complete defence.
+
+def test_reordered_wording_counts_once(monkeypatch):
+    """Same words, different order — one report, not two. Under exact-match
+    dedup this pair reached CONFIRM_WEIGHT on its own."""
+    out = _status_with([
+        _row("stuck at kampung baru for 30 minutes, no announcement"),
+        _row("no announcement, been stuck at kampung baru 30 minutes"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "unconfirmed"
+
+
+def test_malay_reordering_counts_once(monkeypatch):
+    """The guard must work on Malay reports too, not just English."""
+    out = _status_with([
+        _row("LRT rosak kat kampung baru, semua terkandas"),
+        _row("kampung baru LRT rosak, orang ramai terkandas"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "unconfirmed"
+
+
+def test_genuinely_different_reports_still_corroborate(monkeypatch):
+    """The cost of merging must not be paid by real witnesses: two people
+    describing the same event differently must still confirm it."""
+    out = _status_with([
+        _row("kelana jaya line down at kampung baru"),
+        _row("KJ line stuck, train not moving near kampung baru station"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "disrupted"
+
+
+def test_distinct_complaints_at_one_station_are_not_merged(monkeypatch):
+    """Two different problems at the same station are two signals, not one."""
+    out = _status_with([
+        _row("train broke down at kampung baru, everyone is stuck on the platform"),
+        _row("kampung baru escalator not working again, had to take the stairs"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "disrupted"
+
+
+def test_similarity_dedup_does_not_defeat_a_varied_attacker(monkeypatch):
+    """Documents the limit rather than hiding it.
+
+    These two sentences describe one event and share almost no vocabulary —
+    they score 54, below any threshold that keeps genuinely distinct reports
+    apart. Lexical similarity cannot merge them, so one person writing both
+    still reaches CONFIRM_WEIGHT. Only per-user weighting closes this, and the
+    system stores no identifier by design. If this test ever starts failing,
+    something has begun merging reports it should not.
+    """
+    out = _status_with([
+        _row("train broke down at kampung baru, everyone is stuck on the platform"),
+        _row("kampung baru LRT breakdown, service completely stopped"),
+    ], monkeypatch)
+    assert out["lines"]["KJ"]["status"] == "disrupted"
