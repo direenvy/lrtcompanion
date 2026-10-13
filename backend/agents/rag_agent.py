@@ -17,7 +17,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-from agents import fare_lookup
+from agents import fare_lookup, network_facts
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -583,6 +583,21 @@ def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> 
             "sources":     ["integrated_fare_table (validated matrix)"],
             "chunks_used": 0,
             "mode":        "fare_lookup",
+        }
+
+    # Structural questions — accessibility, which lines serve a station, where
+    # two lines interchange — are answered from the same GTFS + accessibility
+    # data the routing agent uses. Retrieval is the wrong tool for these: the
+    # answer is a cell in a table, and a paragraph that merely mentions both
+    # the station and the word "accessible" is exactly how a confident wrong
+    # answer gets grounded. No model is involved, so nothing to verify.
+    facts_answer = network_facts.try_answer(question)
+    if facts_answer:
+        return {
+            "answer":      facts_answer,
+            "sources":     ["gtfs stops.txt + accessibility overlay"],
+            "chunks_used": 0,
+            "mode":        "network_facts",
         }
 
     # Start cache load / background embedding if not done yet (non-blocking)
