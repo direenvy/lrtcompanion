@@ -339,3 +339,100 @@ def test_a_line_mention_is_not_fuzzy_matched_to_its_station():
     guard. Both spellings must stay refused."""
     assert _detect_stations("kelana jaya line completely down") == []
     assert _detect_stations("kelana jaia line completely down") == []
+
+
+# ── Off-network posts must not attribute a Rapid KL line ─────────────────────
+# Measured, not hypothetical: of the 281 alert posts in the scraped log, five
+# carried a false attribution because a post about ANOTHER network listed Rapid
+# KL station names. Each was contributing 0.4 corroboration weight to a line
+# that was running normally.
+
+def test_ktm_disruption_does_not_redden_a_rapid_kl_line():
+    """The real post: Subang Jaya and KL Sentral are both KTM stops AND Rapid
+    KL stops, so a KTM breakdown was attributed to Kelana Jaya."""
+    text = ("Another disruption hit the KTM line between Subang Jaya "
+            "and KL Sentral stations")
+    assert _detect_line(text) is None
+    assert _detect_stations(text) == []
+
+
+def test_road_traffic_bulletin_does_not_attribute_a_line():
+    """Three real posts of this shape were attributed to the Ampang line,
+    because a ROAD bulletin names stations as landmarks."""
+    text = ("1901h: Trafik perlahan - KTM Serdang-Balakong - "
+            "Sapura-The Mines-Balakong - Kuchai Link 2")
+    assert _detect_line(text) is None
+    assert _detect_stations(text) == []
+
+
+def test_ets_and_komuter_are_off_network():
+    assert _detect_line("Talian elektrik terputus, ETS dan KTM Komuter terganggu") is None
+    assert _detect_line("Keretapi Tanah Melayu Berhad komuter delayed") is None
+
+
+def test_an_explicit_line_overrides_the_off_network_guard():
+    """A post can name both. 'LRT3 and KTM both down' really is about LRT3,
+    and the guard must not swallow a genuine report to filter a foreign one."""
+    assert _detect_line("LRT3 and KTM both down this morning") == "SA"
+    assert _detect_line("trafik perlahan, ampang line pun rosak") == "AG"
+
+
+def test_the_guard_does_not_touch_ordinary_reports():
+    assert _detect_line("kelana jaya line down") == "KJ"
+    assert _detect_line("stuck at kampung baru") == "KJ"
+    assert _detect_stations("train stuck at kampung baru") \
+        == [("kampung baru", ["KJ11"])]
+
+
+# ── Fuzzy line-name matching ─────────────────────────────────────────────────
+
+from api.dashboard import (_fuzzy_detect_line, LINE_FUZZY_THRESHOLD,
+                           MIN_FUZZY_PHRASE_CHARS, _FUZZY_LINE_PHRASES)
+
+
+def test_misspelled_line_name_attributes():
+    assert _detect_line("kelana jaia line completely down") == "KJ"
+    assert _detect_line("kajang lin delayed this morning") == "KGL"
+
+
+def test_place_name_keywords_are_never_fuzzy_matched():
+    """'ampang', 'kajang', 'putrajaya', 'shah alam' and 'sunway' are places.
+    Fuzzy-matching a place name is how a report about a shopping trip reddens
+    a line — and with only eight lines, a loose rule assigns one to almost
+    any sentence."""
+    fuzzed = {p for p, _lid in _FUZZY_LINE_PHRASES}
+    for place in ("ampang", "kajang", "putrajaya", "shah alam", "sunway"):
+        assert place not in fuzzed
+
+
+def test_short_phrases_are_excluded_and_why():
+    """'lrt3' is four characters, so at any threshold loose enough to catch
+    'monorel' a bare 'lrt rosak lagi' scored high enough against it to redden
+    LRT3 — on one of the commonest post shapes in the log. Character ratios
+    are meaningless on short strings."""
+    assert MIN_FUZZY_PHRASE_CHARS == 6
+    assert all(len(p) >= MIN_FUZZY_PHRASE_CHARS for p, _lid in _FUZZY_LINE_PHRASES)
+    for text in ("lrt rosak lagi", "lrt stuck again", "the lrt is down",
+                 "mrt rosak pagi ni"):
+        assert _fuzzy_detect_line(text) is None, text
+
+
+def test_generic_complaints_do_not_reach_a_line():
+    for text in ("train stuck everywhere this morning",
+                 "stesen rosak, tak boleh masuk",
+                 "my phone line is down",
+                 "the queue line is so long, stuck for ages"):
+        assert _fuzzy_detect_line(text) is None, text
+
+
+def test_no_fuzzy_line_matching_outside_a_disruption_context():
+    assert _detect_line("thinking about the kelana jaia line tomorrow") is None
+
+
+def test_fuzzy_line_threshold_is_the_measured_value():
+    """82: over the 281 real alert posts it adds nothing wrong, while 80 adds
+    a false attribution (a KTM post reaching Kelana Jaya) and 86 adds nothing
+    at all. Reproduce with:
+        python scripts/tune_station_fuzzy.py --lines --real
+    """
+    assert LINE_FUZZY_THRESHOLD == 82

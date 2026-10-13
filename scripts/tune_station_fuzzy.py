@@ -85,7 +85,155 @@ def best_match(text: str, threshold: int):
     return dash._fuzzy_detect_stations(text, threshold=threshold)
 
 
+# ── line-name cases ─────────────────────────────────────────────────────────
+# Misspelled LINE names fail the same way misspelled station names did: the
+# report is logged and the board stays green. Only the unambiguous phrases are
+# fuzzed, so the negatives here are mostly about what must NOT become a line:
+# place names, other networks, and sentences naming no line at all.
+
+LINE_TYPOS = [
+    ("kelana jaia line completely down",       "KJ"),
+    ("kelena jaya line stuck again",           "KJ"),
+    ("monorial stuck between imbi and timur",  "MR"),
+    ("monorel rosak pagi ni",                  "MR"),
+    ("shah alam lines delayed, stuck",         "SA"),
+    ("kajang lin delayed this morning",        "KGL"),
+    ("ampang lne not moving",                  "AG"),
+    ("sri petalling line held up",             "PH"),
+    ("putrajaya lne stuck at serdang",         "PYL"),
+]
+
+LINE_NEGATIVES = [
+    # THE case the first draft of this script missed, and the reason the
+    # min-phrase-length rule exists: a bare "lrt" scored 86 against "lrt3" and
+    # reddened LRT3. These are among the commonest real posts in the log, so
+    # getting them wrong would have been worse than not fuzzing lines at all.
+    "lrt rosak lagi",
+    "lrt stuck again this morning",
+    "the lrt is down",
+    "mrt rosak pagi ni",
+    "ktm stuck at the station",
+    # names no line at all — must stay None
+    "train stuck everywhere this morning",
+    "stesen rosak, tak boleh masuk",
+    "the whole network is a mess today",
+    # a different network
+    "jakarta mrt delayed this morning, stuck",
+    "singapore ns line breakdown",
+    # place/landmark words that must not become a line
+    "stuck in traffic on the federal highway",
+    "the mall is closed, so crowded",
+    "my online class is broken again",
+    # near-miss English that should not reach a line
+    "the queue line is so long, stuck for ages",
+    "my phone line is down",
+]
+
+
+LABELLING_CSV = ROOT / "data" / "nlp" / "interim" / "live_x_labelling.csv"
+
+
+def _exact_line(text: str):
+    """What _detect_line decides WITHOUT the fuzzy pass, so the sweep below
+    measures only what fuzzing adds."""
+    import re
+    low = text.lower()
+    for kw, lid in dash._STRONG_LINE_KEYWORDS:
+        if kw in low:
+            return lid
+    for name, lid in dash._STATION_LINES:
+        if re.search(r"" + re.escape(name) + r"", low):
+            return lid
+    for lid, meta in dash.LINE_META.items():
+        if any(k in low for k in meta["keywords"]):
+            return lid
+    return None
+
+
+def run_real():
+    """Sweep the fuzzy line rule over the scraped posts actually logged.
+
+    Hand-written negatives are guesses about what real traffic looks like, and
+    the first version of this script got that guess wrong — it had no bare
+    "lrt rosak" case, and 80 was reported as safe when it would have reddened
+    LRT3 on the commonest post shape in the log. This reads the real file
+    instead. Local CSV, so it works with no database and no network.
+    """
+    import csv
+    if not LABELLING_CSV.exists():
+        print(f"{LABELLING_CSV} not found — run the ingestion poller first.")
+        return
+    with LABELLING_CSV.open(encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    alerts = [r for r in rows if r.get("disruption_alert") == "True"]
+    print(f"{len(rows)} scraped posts, {len(alerts)} of them alerts")
+    print("Only alert rows matter: attribution feeds corroboration, and a")
+    print("non-alert post never reaches it.")
+    print()
+    for t in THRESHOLDS:
+        new = []
+        for r in alerts:
+            text = r.get("cleaned_text", "")
+            if not dash._DISRUPTION_CONTEXT.search(text):
+                continue
+            if _exact_line(text) is not None:
+                continue
+            got = dash._fuzzy_detect_line(text, threshold=t)
+            if got:
+                new.append((got, text))
+        print(f"  threshold {t:<4} {len(new)} new attribution(s)")
+        for lid, text in new[:6]:
+            print(f"      {lid}  {text[:88]}")
+    print()
+    print("Read every new attribution. A threshold that adds nothing on real")
+    print("traffic is dead code; one that adds a wrong line is worse than no")
+    print("fuzzing at all. Pick the HIGHEST threshold that still adds the")
+    print("correct ones.")
+
+
+def run_lines():
+    print("LINE NAMES — misspelled line names must attribute, "
+          "non-lines must not")
+    print(f"{'thresh':<9}{'typos resolved':<18}{'negatives clean':<18}note")
+    print("-" * 70)
+    usable, detail = [], {}
+    for t in THRESHOLDS:
+        wrong = [(txt, want, dash._fuzzy_detect_line(txt, threshold=t))
+                 for txt, want in LINE_TYPOS
+                 if dash._fuzzy_detect_line(txt, threshold=t) != want]
+        dirty = [(txt, dash._fuzzy_detect_line(txt, threshold=t))
+                 for txt in LINE_NEGATIVES
+                 if dash._fuzzy_detect_line(txt, threshold=t) is not None]
+        ok = not wrong and not dirty
+        if ok:
+            usable.append(t)
+        detail[t] = (wrong, dirty)
+        print(f"{t:<9}{f'{len(LINE_TYPOS)-len(wrong)}/{len(LINE_TYPOS)}':<18}"
+              f"{f'{len(LINE_NEGATIVES)-len(dirty)}/{len(LINE_NEGATIVES)}':<18}"
+              f"{'both correct' if ok else ''}")
+    print()
+    if usable:
+        print(f"Thresholds satisfying both sets: {usable}")
+        print(f"Take the HIGHEST ({max(usable)}). With only eight lines to pick")
+        print("from, a loose rule assigns some line to almost any sentence.")
+    else:
+        print("NO threshold satisfies both sets — do not enable line fuzzing.")
+    print()
+    print("FAILURES BY THRESHOLD")
+    for t in THRESHOLDS:
+        wrong, dirty = detail[t]
+        if not (wrong or dirty):
+            continue
+        print(f"  {t}:")
+        for txt, want, got in wrong:
+            print(f"    missed  want {want:<5} got {str(got):<6} <- {txt[:45]}")
+        for txt, got in dirty:
+            print(f"    FALSE   got  {got:<11}         <- {txt[:45]}")
+
+
 def main():
+    if "--lines" in sys.argv:
+        return run_real() if "--real" in sys.argv else run_lines()
     if not hasattr(dash, "_fuzzy_detect_stations"):
         print("api.dashboard has no _fuzzy_detect_stations — nothing to tune.")
         return

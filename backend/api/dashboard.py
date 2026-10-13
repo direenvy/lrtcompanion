@@ -422,6 +422,11 @@ def _detect_stations(text: str) -> list[tuple[str, list[str]]]:
     """(station_name, stop_ids) for every station explicitly named in the text.
     Longest name first; matched spans are masked so 'ampang' cannot re-match
     inside an already-matched 'ampang park'."""
+    # Same guard as _detect_line, for the same reason: a KTM disruption naming
+    # Subang Jaya and KL Sentral, or a road bulletin listing stations as
+    # landmarks, must not produce station chips or reroute avoidance either.
+    if _is_off_network(text):
+        return []
     lower = text.lower()
     found: list[tuple[str, list[str]]] = []
     for name in _STATION_NAMES:
@@ -476,7 +481,112 @@ _STRONG_LINE_KEYWORDS = [
 ]
 
 
+# Line phrases safe to match approximately. ONLY the ones that can mean
+# nothing but a line: "kelana jaya line", "lrt3", "monorail". The weak
+# keywords in LINE_META ("ampang", "kajang", "putrajaya", "shah alam",
+# "sunway") are deliberately excluded — they are place names, and fuzzy-
+# matching a place name is precisely how a report about a shopping trip ends
+# up reddening a line. With only eight lines to choose from, a loose rule
+# would assign some line to almost any sentence.
+#
+# Phrases shorter than MIN_FUZZY_PHRASE_CHARS are also excluded, and that rule
+# earned its place: "lrt3" is four characters, so at any threshold loose enough
+# to catch "monorel" a bare "lrt rosak lagi" — one of the commonest real Malay
+# posts — scored high enough against "lrt3" to redden LRT3. Character ratios
+# are meaningless on short strings. The cost is that "lrt 3 tergendala" stays
+# unresolved, which is the right trade: that typo is rare, and the false
+# attribution would have fired on nearly every generic Malay LRT complaint.
+MIN_FUZZY_PHRASE_CHARS = 6
+_FUZZY_LINE_PHRASES: tuple[tuple[str, str], ...] = tuple(
+    (p, lid) for p, lid in (list(_STRONG_LINE_KEYWORDS) + [("monorail", "MR")])
+    if len(p) >= MIN_FUZZY_PHRASE_CHARS
+)
+# 82, chosen from real traffic rather than from the hand-written cases. Over
+# the 281 alert posts in data/nlp/interim/live_x_labelling.csv, 82 adds exactly
+# two attributions and both are correct — "Kelana Jaya LRT", the phrase news
+# and commuters actually use, which the exact rule misses because it only
+# knows "kelana jaya line". It adds zero wrong ones. 86 (the first guess) adds
+# nothing at all on real data, and 80 adds nothing 82 does not.
+# Reproduce with: python scripts/tune_station_fuzzy.py --lines --real
+LINE_FUZZY_THRESHOLD = 82
+
+
+def _fuzzy_detect_line(text: str,
+                       threshold: int = LINE_FUZZY_THRESHOLD) -> str | None:
+    """Line id from an approximately-spelled line name, or None.
+
+    Same gap as the station detector had, and the same shape of fix: today
+    "kelana jaia line down" attributes nothing at all, so the report is logged
+    and the board stays green. Guards mirror the station pass — equal word
+    count, a clear winner only, and the caller runs this only when exact
+    matching found nothing in a disruption context.
+    """
+    from rapidfuzz import fuzz
+
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    if not words:
+        return None
+
+    by_len: dict[int, list[tuple[str, str]]] = {}
+    for phrase, line_id in _FUZZY_LINE_PHRASES:
+        by_len.setdefault(len(phrase.split()), []).append((phrase, line_id))
+
+    for n in sorted(by_len, reverse=True):          # longest phrases first
+        for i in range(len(words) - n + 1):
+            span = " ".join(words[i:i + n])
+            scored = sorted(((fuzz.ratio(span, p), p, lid)
+                             for p, lid in by_len[n]), reverse=True)
+            if not scored or scored[0][0] < threshold:
+                continue
+            # A tie between two different LINES is not a detection. A tie
+            # between two phrases for the same line is fine ("monorail" vs
+            # "monorail line" both mean MR).
+            if len(scored) > 1 and scored[0][0] - scored[1][0] < AMBIGUITY_MARGIN \
+                    and scored[1][2] != scored[0][2]:
+                continue
+            return scored[0][2]
+    return None
+
+
+# Networks and modes this system does not cover. A post about one of them must
+# not attribute a Rapid KL line, however many Rapid KL station names it happens
+# to contain. Measured, not hypothetical: of the 281 alert posts in the scraped
+# log, five carried a false attribution from exactly this cause —
+#
+#   "Another disruption hit the KTM line between Subang Jaya and KL Sentral"
+#       -> Kelana Jaya, because both place names are also Rapid KL stations
+#   "1901h: Trafik perlahan - KTM Serdang-Balakong - Sapura-The Mines"
+#       -> Ampang, because a ROAD traffic bulletin lists stations near the line
+#
+# Each was contributing 0.4 corroboration weight to a line that was running.
+# The intent gate would reject most of them, but the gate is off by default and
+# costs a model call; this is deterministic and free.
+_FOREIGN_NETWORK = re.compile(
+    r"\b(?:ktm|ktmb|komuter|ets|keretapi\s+tanah\s+melayu)\b", re.IGNORECASE)
+# Road bulletins, which name stations as landmarks. "Trafik perlahan" is the
+# fixed prefix the Malaysian traffic accounts use.
+_ROAD_BULLETIN = re.compile(
+    r"\b(?:trafik\s+perlahan|traffic\s+slow|lebuhraya|besraya|"
+    r"plaza\s+tol|highway)\b", re.IGNORECASE)
+
+
+def _is_off_network(text: str) -> bool:
+    """True when the post is about a network or mode this system does not
+    cover, and names no Rapid KL line explicitly.
+
+    An explicit line phrase overrides both guards: "LRT3 and KTM both down"
+    really is about LRT3, and "trafik perlahan, ampang line pun rosak" names
+    the line itself rather than using a station as a landmark.
+    """
+    lower = text.lower()
+    if any(kw in lower for kw, _lid in _STRONG_LINE_KEYWORDS):
+        return False
+    return bool(_FOREIGN_NETWORK.search(text) or _ROAD_BULLETIN.search(text))
+
+
 def _detect_line(text: str) -> str | None:
+    if _is_off_network(text):
+        return None
     lower = text.lower()
     # 0. Strong, explicit line names win first (disambiguates interchanges).
     for kw, line_id in _STRONG_LINE_KEYWORDS:
@@ -492,6 +602,11 @@ def _detect_line(text: str) -> str | None:
         for kw in meta["keywords"]:
             if kw in lower:
                 return line_id
+    # 3. Nothing matched exactly. Try an approximate match on the unambiguous
+    #    line phrases only — and only when the text is reporting a problem,
+    #    so ordinary mentions are never fuzzed into an attribution.
+    if STATION_FUZZY and _DISRUPTION_CONTEXT.search(text):
+        return _fuzzy_detect_line(text)
     return None
 
 
