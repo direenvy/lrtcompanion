@@ -236,3 +236,106 @@ def test_short_station_name_upm_still_detected():
     st = _detect_stations("upm station not working")
     assert st and st[0][0] == "upm"
     assert "PYL" in _lines_for_station_stops(st[0][1])
+
+
+# ── Fuzzy fallback for misspelled station names ──────────────────────────────
+# Exact matching is why "masjid jamek stuck" works and "masjid jamik" does
+# nothing — no chip, no fan-out, no reroute avoidance. These tests pin the four
+# guards that make the fallback safe, because a false attribution here reddens
+# a line and routes people away from a station that is running.
+
+from api.dashboard import _fuzzy_detect_stations, STATION_FUZZY_THRESHOLD
+
+
+def test_misspelled_station_is_detected():
+    found = dict(_detect_stations("stuck at masjid jamik, no train coming"))
+    assert "masjid jamek" in found
+
+
+def test_transcription_error_is_detected():
+    """The voice path returns phonetic spellings; they must still resolve."""
+    found = dict(_detect_stations("kampong baru lrt rosak, semua terkandas"))
+    assert "kampung baru" in found
+
+
+def test_exact_match_wins_and_suppresses_the_fuzzy_pass(monkeypatch):
+    """Guard 1. Text that works today must behave identically — the fuzzy pass
+    does not even run, so it cannot reinterpret a correct report."""
+    import api.dashboard as dash
+    called = []
+    monkeypatch.setattr(dash, "_fuzzy_detect_stations",
+                        lambda t, **k: called.append(t) or [])
+    assert dash._detect_stations("train stuck at kampung baru") \
+        == [("kampung baru", ["KJ11"])]
+    assert called == []
+
+
+def test_no_fuzzy_matching_outside_a_disruption_context():
+    """Guard 2. Idle chatter must never be fuzz-matched to a station."""
+    assert _detect_stations("thinking about masjid jamik tomorrow") == []
+
+
+def test_shorter_place_cannot_match_a_longer_station_name():
+    """Guard 3, and the regression that motivated it: 'shah alam' is two words
+    and STADIUM SHAH ALAM is three, so the span is never compared against it.
+    This exact substitution reached a user once."""
+    assert _detect_stations("shah alam traffic is terrible, jammed everywhere") == []
+
+
+def test_ambiguous_match_yields_nothing(monkeypatch):
+    """Guard 4. Two plausible stations is not a detection — guessing between
+    them is worse than reporting neither, because the wrong one gets avoided.
+
+    Built on a tie rather than hoping the real gazetteer contains one: both
+    candidates score 92 against the span, inside AMBIGUITY_MARGIN."""
+    import api.dashboard as dash
+    monkeypatch.setattr(dash, "_STATION_NAMES", ["taman melati", "taman melatu"])
+    monkeypatch.setattr(dash, "_STATION_STOP_IDS",
+                        {"taman melati": ["KJ2"], "taman melatu": ["KJ3"]})
+    assert dash._fuzzy_detect_stations("stuck at taman melatl", threshold=80) == []
+    # ...while a clear winner is still returned
+    monkeypatch.setattr(dash, "_STATION_NAMES", ["taman melati"])
+    assert dash._fuzzy_detect_stations("stuck at taman melatl", threshold=80)         == [("taman melati", ["KJ2"])]
+
+
+def test_common_word_stations_are_never_fuzzy_matched():
+    """'universiti', 'merdeka' and friends are ordinary words. They already
+    need a disruption context to match EXACTLY; fuzzy-matching them would
+    undo that guard from the other side."""
+    found = dict(_fuzzy_detect_stations("my universitti class is cancelled, broke down"))
+    assert "universiti" not in found
+
+
+def test_other_malaysian_places_do_not_resolve():
+    """A threshold loose enough to catch typos must still reject places that
+    are not stations. These are the negatives the threshold was tuned against."""
+    for text in ("flight delayed at klia2 again, stuck",
+                 "penang bridge closed this morning, jammed",
+                 "jakarta mrt delayed this morning, stuck"):
+        assert _fuzzy_detect_stations(text) == [], text
+
+
+def test_threshold_is_the_measured_value():
+    """82-88 satisfied both labelled sets (scripts/tune_station_fuzzy.py); 88
+    is the highest, chosen because under-matching is the safer error. If this
+    is ever lowered, re-run the script — 80 starts producing false matches."""
+    assert STATION_FUZZY_THRESHOLD == 88
+
+
+def test_fuzzy_matching_can_be_switched_off():
+    """A kill switch that needs no deploy, because this is the one addition
+    that is on by default."""
+    import api.dashboard as dash
+    assert dash.STATION_FUZZY is True
+
+
+def test_a_line_mention_is_not_fuzzy_matched_to_its_station():
+    """Guard 5, found by an existing test rather than by design.
+
+    The exact pass REFUSES '<name> line' — it names the line, not the station.
+    Guard 1 ("only run when exact matching found nothing") does not cover this,
+    because a deliberate refusal and a genuine absence look identical from
+    outside: the fuzzy pass then matched 'kelana jaya' at 100 and undid the
+    guard. Both spellings must stay refused."""
+    assert _detect_stations("kelana jaya line completely down") == []
+    assert _detect_stations("kelana jaia line completely down") == []

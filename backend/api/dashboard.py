@@ -343,6 +343,81 @@ def _derive_station_disruptions(all_alerts: list[dict],
     return disrupted, advisory
 
 
+# ── Fuzzy fallback for misspelled station names ──────────────────────────────
+# Exact matching is why "masjid jamek stuck" lights up the board. It is also
+# why "masjid jamik" does nothing at all — no chip, no line fan-out, no reroute
+# avoidance. The report is logged and silently ignored, which is the gap behind
+# the voice-transcription misses too.
+#
+# The rule below is deliberately narrow, because the two errors here are not
+# symmetric. A missed typo leaves the board exactly as it is today. A false
+# attribution reddens a line and routes people away from a station that is
+# running — the "shah alam" -> STADIUM SHAH ALAM shape.
+#
+# Four guards, each closing a specific failure:
+#   1. it runs ONLY when exact matching found nothing, so no text that works
+#      today can change behaviour
+#   2. it runs ONLY in a disruption context, so idle chatter is never fuzzed
+#   3. a candidate span must have the SAME WORD COUNT as the station name, so
+#      a 2-word place can never match a 3-word station containing it
+#   4. an ambiguous best match — two stations within AMBIGUITY_MARGIN — yields
+#      nothing, because guessing between two stations is worse than neither
+#   5. a span followed by "line" is skipped, exactly as the exact pass skips
+#      it. Without this, "kelana jaya line down" — which the exact pass
+#      deliberately REFUSES, because it names the line and not the station —
+#      falls through to the fuzzy pass and matches at 100, quietly undoing the
+#      guard. Guard 1 is not enough on its own: "found nothing" and "declined
+#      to match" look identical from outside.
+# Threshold measured with scripts/tune_station_fuzzy.py, not chosen by feel.
+STATION_FUZZY_THRESHOLD = 88
+AMBIGUITY_MARGIN = 3
+# On by default, unlike the other additions: it only ever fires where the
+# board currently shows nothing, so the worst case is the behaviour already
+# shipping. Set STATION_FUZZY=0 to turn it off without a deploy.
+STATION_FUZZY = os.getenv("STATION_FUZZY", "1").strip() != "0"
+
+
+def _fuzzy_detect_stations(
+        text: str, threshold: int = STATION_FUZZY_THRESHOLD
+) -> list[tuple[str, list[str]]]:
+    """Stations named approximately in the text. See the guards above."""
+    from rapidfuzz import fuzz
+
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    if not words:
+        return []
+
+    # Group the gazetteer by word count so a span is only ever compared with
+    # names of the same length — guard 3.
+    by_len: dict[int, list[str]] = {}
+    for name in _STATION_NAMES:
+        if name in _COMMON_WORD_STATIONS:
+            continue                      # never fuzzy-match an everyday word
+        by_len.setdefault(len(name.split()), []).append(name)
+
+    found: list[tuple[str, list[str]]] = []
+    taken: set[int] = set()               # word indices already consumed
+    for n in sorted(by_len, reverse=True):          # longest names first
+        for i in range(len(words) - n + 1):
+            if any(j in taken for j in range(i, i + n)):
+                continue
+            # guard 5: '<name> line' names the line, not the station
+            if i + n < len(words) and words[i + n] == "line":
+                continue
+            span = " ".join(words[i:i + n])
+            scored = sorted(((fuzz.ratio(span, name), name)
+                             for name in by_len[n]), reverse=True)
+            if not scored or scored[0][0] < threshold:
+                continue
+            if len(scored) > 1 and scored[0][0] - scored[1][0] < AMBIGUITY_MARGIN:
+                continue                  # guard 4: two plausible stations
+            name = scored[0][1]
+            if name not in dict(found):
+                found.append((name, _STATION_STOP_IDS[name]))
+            taken.update(range(i, i + n))
+    return found
+
+
 def _detect_stations(text: str) -> list[tuple[str, list[str]]]:
     """(station_name, stop_ids) for every station explicitly named in the text.
     Longest name first; matched spans are masked so 'ampang' cannot re-match
@@ -364,6 +439,11 @@ def _detect_stations(text: str) -> list[tuple[str, list[str]]]:
             if re.search(pattern, lower):
                 found.append((name, _STATION_STOP_IDS[name]))
                 lower = re.sub(pattern, " ", lower)
+
+    # Guards 1 and 2: only when exact matching found nothing, and only when the
+    # text is actually reporting a problem.
+    if not found and STATION_FUZZY and _DISRUPTION_CONTEXT.search(text):
+        found = _fuzzy_detect_stations(text)
     return found
 
 LINE_META = {
