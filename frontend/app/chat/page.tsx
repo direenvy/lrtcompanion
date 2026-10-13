@@ -9,8 +9,50 @@ interface Msg {
   role: "user" | "assistant";
   text: string;
   sources?: string[];
+  mode?: string;
+  grounding?: { verdict?: string; checked_by?: string | null };
   feedback?: 1 | -1 | null;  // thumbs up/down state
 }
+
+/* How the answer was produced, in the user's words rather than the pipeline's.
+   The backend already decides this and logs it; showing it is what turns
+   "every decision is traceable" from a claim into something visible. The two
+   deterministic modes are labelled as such on purpose — an exact fare or an
+   accessibility flag involves no model, and that is the more trustworthy
+   answer, not a lesser one. */
+function provenance(mode?: string, grounding?: Msg["grounding"]) {
+  if (!mode) return null;
+  if (mode === "fare_lookup")
+    return { label: "Exact fare table", tone: "solid",
+             title: "Answered from the validated fare matrix. No retrieval and no language model, so the number cannot drift." };
+  if (mode === "network_facts")
+    return { label: "Network data", tone: "solid",
+             title: "Answered from the GTFS feed and the accessibility overlay. No retrieval and no language model." };
+  if (mode.endsWith("_refused_on_verify"))
+    return { label: "Refused — unsupported", tone: "warn",
+             title: "A draft answer was generated, then checked against the retrieved documents and found not to follow from them. It was replaced with a refusal rather than served." };
+  if (mode.includes("extractive"))
+    return { label: "Document extract", tone: "soft",
+             title: "Generation was unavailable, so the official document text is shown directly instead of a summary." };
+  if (mode === "keyword")
+    return { label: "Keyword retrieval", tone: "soft",
+             title: "Semantic search was unavailable; this fell back to keyword matching over the same documents." };
+  if (mode.startsWith("semantic")) {
+    const v = grounding?.verdict;
+    if (v === "supported")
+      return { label: `Retrieved · verified${grounding?.checked_by ? ` (${grounding.checked_by})` : ""}`, tone: "solid",
+               title: "Retrieved from the official documents, then checked a second time against those same documents and found to be supported by them." };
+    return { label: "Retrieved · unverified", tone: "soft",
+             title: "Retrieved from the official documents. The second-pass grounding check could not run, so the answer is served unverified rather than withheld." };
+  }
+  return null;
+}
+
+const TONES: Record<string, { bg: string; fg: string; bd: string }> = {
+  solid: { bg: "rgba(16,185,129,0.10)",  fg: "#047857", bd: "rgba(16,185,129,0.30)" },
+  soft:  { bg: "rgba(0,0,0,0.04)",       fg: "#737373", bd: "rgba(0,0,0,0.08)" },
+  warn:  { bg: "rgba(245,158,11,0.12)",  fg: "#92400e", bd: "rgba(245,158,11,0.32)" },
+};
 
 const SUGGESTIONS = [
   "What is the My50 monthly pass?",
@@ -66,7 +108,8 @@ export default function ChatPage() {
       // Send the last 10 turns as history for context
       const history = newMsgs.slice(-10).map(m => ({ role: m.role, text: m.text }));
       const d = await chatWithRAG(q, history);
-      setMsgs(p => [...p, { role: "assistant", text: d.answer, sources: d.sources, feedback: null }]);
+      setMsgs(p => [...p, { role: "assistant", text: d.answer, sources: d.sources,
+                            mode: d.mode, grounding: d.grounding, feedback: null }]);
     } catch {
       setMsgs(p => [...p, { role: "assistant", text: "Sorry — I can\u2019t reach the server right now. Please try again in a moment.", feedback: null }]);
     } finally { setLoad(false); }
@@ -150,6 +193,23 @@ export default function ChatPage() {
                   ) : (
                     <p style={{ whiteSpace: "pre-wrap" }}>{m.text}</p>
                   )}
+
+                  {(() => {
+                    const p = provenance(m.mode, m.grounding);
+                    if (!p) return null;
+                    const t = TONES[p.tone];
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <span title={p.title} style={{
+                          fontSize: 9, letterSpacing: 0.3, color: t.fg, background: t.bg,
+                          border: `1px solid ${t.bd}`, padding: "2px 7px", borderRadius: 5,
+                          cursor: "help",
+                        }}>
+                          {p.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {m.sources && m.sources.length > 0 && (
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(0,0,0,0.08)", display: "flex", flexWrap: "wrap", gap: 4 }}>
