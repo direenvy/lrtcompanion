@@ -40,3 +40,16 @@ def no_geocoding(monkeypatch):
     """Block Nominatim/Photon so failed station lookups fail fast + offline."""
     import agents.rerouting_agent as ra
     monkeypatch.setattr(ra, "_geocode_place", lambda q: None)
+
+
+@pytest.fixture(autouse=True)
+def no_intent_gate_calls(monkeypatch):
+    """The ingestion intent gate asks a hosted model one question per alert.
+    Block both providers so nothing in the suite can reach the network: an
+    unpatched gate then fails open, which is the behaviour it promises anyway.
+    Tests that exercise the gate monkeypatch over these."""
+    import agents.intent_gate as gate
+    def blocked(prompt):
+        raise RuntimeError("network blocked in tests")
+    monkeypatch.setattr(gate, "_call_gemini", blocked)
+    monkeypatch.setattr(gate, "_call_groq", blocked)

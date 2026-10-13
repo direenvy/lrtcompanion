@@ -275,3 +275,66 @@ def test_other_400s_are_not_treated_as_a_stale_cursor(ingest_env, monkeypatch):
     summary = ia.run_pull()
     assert summary["status"] == "error"
     assert ia._load_state()["newest_id"] == "1500"   # cursor preserved
+
+
+# ── intent gate wiring ───────────────────────────────────────────────────────
+# The gate decides whether a classified alert keeps its disruption_alert flag.
+# What matters here is that the post is still LOGGED either way: clearing the
+# flag must stop it voting, not hide it from the feed.
+
+def test_gated_post_is_logged_with_the_flag_cleared(ingest_env, monkeypatch):
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": false, "why": "joke"}')
+
+    summary = ia.run_pull()
+    assert summary["alerts"] == 0 and summary["gated"] == 1
+    (row,) = ingest_env                     # still one row written
+    assert row["disruption_alert"] is False
+    assert "breakdown" in row["text"].lower()
+    assert row["method"].endswith("+gate_filtered")   # decision is auditable
+
+
+def test_live_post_passes_the_gate_untouched(ingest_env, monkeypatch):
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": true, "why": "stuck"}')
+
+    summary = ia.run_pull()
+    assert summary["alerts"] == 1 and summary["gated"] == 0
+    (row,) = ingest_env
+    assert row["disruption_alert"] is True
+    assert "gate_filtered" not in (row["method"] or "")
+
+
+def test_gate_outage_does_not_suppress_alerts(ingest_env, monkeypatch):
+    """Both providers unavailable (conftest blocks them) — the alert stands."""
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+
+    summary = ia.run_pull()
+    assert summary["alerts"] == 1 and summary["gated"] == 0
+    assert ingest_env[0]["disruption_alert"] is True
+
+
+def test_disabled_gate_leaves_ingestion_exactly_as_it_was(ingest_env):
+    """The default path must be unchanged: no gate call, same alert count."""
+    summary = ia.run_pull()
+    assert summary["status"] == "ok"
+    assert summary["scanned"] == 2 and summary["alerts"] == 1
+    assert summary["gated"] == 0
+    assert ingest_env[0]["disruption_alert"] is True
+
+
+def test_gate_counters_are_reported_separately(ingest_env, monkeypatch):
+    """A falling alert count could mean a quiet network or an eager gate.
+    get_status has to distinguish them."""
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": false, "why": "meme"}')
+
+    ia.run_pull()
+    status = ia.get_status()
+    assert status["intent_gate"] is True
+    assert status["alerts_gated"] == 1
+    assert status["alerts_raised"] == 0

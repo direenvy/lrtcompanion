@@ -26,6 +26,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from agents import intent_gate
+from agents.intent_gate import filter_alert
 from agents.nlp_agent import predict
 from db.supabase_client import log_disruption
 
@@ -243,22 +245,42 @@ def run_pull() -> dict:
         new_posts = [p for p in posts if p["id"] not in seen]
 
         alerts = 0
+        gated = 0
         labelling_rows = []
         for post in new_posts:
             result = predict(post["text"])
             if result["disruption_alert"]:
+                # The classifier says "negative, and about a service issue".
+                # The gate asks the prior question — is this a report of a
+                # live problem, or commentary that merely sounds like one? A
+                # post it rejects is still logged and still shown on the feed;
+                # it just stops contributing corroboration weight.
+                gate = filter_alert(post["text"],
+                                    official=bool(post.get("official")))
+                method = result.get("method")
+                if not gate["alert"]:
+                    gated += 1
+                    # Recorded in `method` rather than a new column so the
+                    # decision is auditable without a schema migration.
+                    method = f"{method or 'unknown'}+gate_filtered"
+                    print(f"[Gate] alert cleared ({gate['why']}): "
+                          f"{post['text'][:70]!r}")
                 log_disruption(
                     text=post["text"],
                     sentiment=result["sentiment"],
                     issue_type=result["issue_type"],
-                    disruption_alert=True,
+                    disruption_alert=gate["alert"],
                     # official Rapid KL posts are authoritative → x_official
                     # (confirms on its own); other tweets stay x_live (low-trust)
                     source="x_official" if post.get("official") else "x_live",
-                    method=result.get("method"),
+                    method=method,
                     created_at=post.get("created_at"),
                 )
-                alerts += 1
+                if gate["alert"]:
+                    alerts += 1
+            # The labelling sheet records what the CLASSIFIER decided, not what
+            # the gate did with it — it is training material for the classifier,
+            # and mixing the gate's verdict in would teach it the wrong label.
             labelling_rows.append({
                 "id": post["id"], "created_at": post.get("created_at", ""),
                 "cleaned_text": " ".join(post["text"].split()),
@@ -281,10 +303,12 @@ def run_pull() -> dict:
         state["last_poll"] = now_iso
         state["tweets_scanned"] = state.get("tweets_scanned", 0) + len(new_posts)
         state["alerts_raised"] = state.get("alerts_raised", 0) + alerts
+        state["alerts_gated"] = state.get("alerts_gated", 0) + gated
         state["last_result"] = "ok"
         _save_state(state)
 
-        return {"status": "ok", "scanned": len(new_posts), "alerts": alerts}
+        return {"status": "ok", "scanned": len(new_posts),
+                "alerts": alerts, "gated": gated}
 
 
 def get_status() -> dict:
@@ -297,6 +321,11 @@ def get_status() -> dict:
         "last_result": state.get("last_result"),
         "tweets_scanned": state.get("tweets_scanned", 0),
         "alerts_raised": state.get("alerts_raised", 0),
+        # Posts the classifier flagged but the intent gate rejected. Reported
+        # separately so the gate's effect stays visible rather than silently
+        # lowering the alert count.
+        "intent_gate": intent_gate.INTENT_GATE,
+        "alerts_gated": state.get("alerts_gated", 0),
     }
 
 
