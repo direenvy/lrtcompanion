@@ -640,3 +640,78 @@ def test_resolve_empty_when_nothing_matches():
     from api.voice import resolve_stations, ResolveRequest
     r = resolve_stations(ResolveRequest(text="hello how are you"))
     assert r["origin"] is None and r["destination"] is None and r["suggestion"] is None
+
+
+# ── Intent gate on the voice path ────────────────────────────────────────────
+# "I want to go to Mid Valley" logged as a breakdown is where this bug was
+# first noticed. The acknowledgement matters as much as the log row: an
+# assistant that says "I have reported the problem" when no alert was recorded
+# is telling the user something untrue about its own behaviour.
+
+import agents.intent_gate as gate
+import api.voice as voice_api
+
+
+def test_navigation_request_is_not_acknowledged_as_a_report(monkeypatch):
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: '{"live": false, "why": "navigation request"}')
+    logged = []
+    monkeypatch.setattr(voice_api, "log_disruption",
+                        lambda **kw: logged.append(kw))
+    monkeypatch.setattr(voice_api, "predict", lambda t, allow_remote=True: {
+        "sentiment": "negative", "issue_type": "breakdown",
+        "disruption_alert": True, "method": "local",
+        "sentiment_scores": {}, "issue_scores": {}})
+
+    out = assist(VoiceRequest(
+        text="I'm stuck at Kampung Baru, I want to go to Masjid Jamek"))
+    assert logged[0]["disruption_alert"] is False
+    assert logged[0]["method"].endswith("+gate_filtered")
+    # the route is still planned — the user still gets what they asked for
+    assert out["origin"] == "KAMPUNG BARU"
+    assert not out["reply"].startswith("I have reported the problem")
+
+
+def test_a_real_spoken_report_is_still_acknowledged(monkeypatch):
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: '{"live": true, "why": "stuck on platform"}')
+    monkeypatch.setattr(voice_api, "log_disruption", lambda **kw: None)
+
+    out = assist(VoiceRequest(
+        text="I'm stuck at Kampung Baru, I want to go to Masjid Jamek"))
+    assert out["reply"].startswith("I have reported the problem")
+
+
+def test_voice_uses_a_shorter_timeout_than_the_batch_path(monkeypatch):
+    """The user is waiting. The Gemini classifier refinement was already
+    removed from this path because it cost ~9 s; the gate must not
+    reintroduce the same problem."""
+    from agents.intent_gate import GATE_TIMEOUT_SECONDS, VOICE_TIMEOUT_SECONDS
+    assert VOICE_TIMEOUT_SECONDS < GATE_TIMEOUT_SECONDS
+
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    seen = []
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: seen.append(t) or '{"live": true}')
+    monkeypatch.setattr(voice_api, "log_disruption", lambda **kw: None)
+    monkeypatch.setattr(voice_api, "predict", lambda t, allow_remote=True: {
+        "sentiment": "negative", "issue_type": "breakdown",
+        "disruption_alert": True, "method": "local",
+        "sentiment_scores": {}, "issue_scores": {}})
+
+    assist(VoiceRequest(text="stuck at kampung baru going to masjid jamek"))
+    assert seen == [VOICE_TIMEOUT_SECONDS]
+
+
+def test_gate_outage_still_acknowledges_the_report(monkeypatch):
+    """Fails open — both providers blocked by conftest. Under-reporting a real
+    disruption is the worse error, and silently dropping the acknowledgement
+    would make the user repeat themselves."""
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(voice_api, "log_disruption", lambda **kw: None)
+
+    out = assist(VoiceRequest(
+        text="I'm stuck at Kampung Baru, I want to go to Masjid Jamek"))
+    assert out["reply"].startswith("I have reported the problem")

@@ -49,7 +49,7 @@ def no_intent_gate_calls(monkeypatch):
     unpatched gate then fails open, which is the behaviour it promises anyway.
     Tests that exercise the gate monkeypatch over these."""
     import agents.intent_gate as gate
-    def blocked(prompt):
+    def blocked(prompt, timeout=None):
         raise RuntimeError("network blocked in tests")
     monkeypatch.setattr(gate, "_call_gemini", blocked)
     monkeypatch.setattr(gate, "_call_groq", blocked)

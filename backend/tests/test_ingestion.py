@@ -285,7 +285,7 @@ def test_other_400s_are_not_treated_as_a_stale_cursor(ingest_env, monkeypatch):
 def test_gated_post_is_logged_with_the_flag_cleared(ingest_env, monkeypatch):
     import agents.intent_gate as gate
     monkeypatch.setattr(gate, "INTENT_GATE", True)
-    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": false, "why": "joke"}')
+    monkeypatch.setattr(gate, "_call_gemini", lambda p, t=None: '{"live": false, "why": "joke"}')
 
     summary = ia.run_pull()
     assert summary["alerts"] == 0 and summary["gated"] == 1
@@ -298,7 +298,7 @@ def test_gated_post_is_logged_with_the_flag_cleared(ingest_env, monkeypatch):
 def test_live_post_passes_the_gate_untouched(ingest_env, monkeypatch):
     import agents.intent_gate as gate
     monkeypatch.setattr(gate, "INTENT_GATE", True)
-    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": true, "why": "stuck"}')
+    monkeypatch.setattr(gate, "_call_gemini", lambda p, t=None: '{"live": true, "why": "stuck"}')
 
     summary = ia.run_pull()
     assert summary["alerts"] == 1 and summary["gated"] == 0
@@ -331,7 +331,7 @@ def test_gate_counters_are_reported_separately(ingest_env, monkeypatch):
     get_status has to distinguish them."""
     import agents.intent_gate as gate
     monkeypatch.setattr(gate, "INTENT_GATE", True)
-    monkeypatch.setattr(gate, "_call_gemini", lambda p: '{"live": false, "why": "meme"}')
+    monkeypatch.setattr(gate, "_call_gemini", lambda p, t=None: '{"live": false, "why": "meme"}')
 
     ia.run_pull()
     status = ia.get_status()

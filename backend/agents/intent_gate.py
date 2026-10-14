@@ -47,6 +47,11 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 INTENT_GATE = os.getenv("INTENT_GATE", "0").strip() == "1"
 GATE_PROVIDER = os.getenv("INTENT_GATE_PROVIDER", "gemini").strip().lower()
 GATE_TIMEOUT_SECONDS = 6
+# The voice turn is interactive — the user is waiting while it answers. The
+# Gemini classifier refinement was already removed from that path because it
+# cost ~9 s. A shorter budget keeps the gate from reintroducing the same
+# problem: if it has not answered in this long, fail open and route the user.
+VOICE_TIMEOUT_SECONDS = 3
 
 PROMPT = """You are filtering social media posts for a rail disruption monitor \
 covering the Klang Valley (Kuala Lumpur) rail network: LRT Kelana Jaya, LRT \
@@ -83,18 +88,17 @@ POST:
 {post}"""
 
 
-def _call_gemini(prompt: str) -> str:
+def _call_gemini(prompt: str, timeout: float = GATE_TIMEOUT_SECONDS) -> str:
     """Raw gate reply from Gemini. Raises on any failure."""
     import google.generativeai as genai
     from agents.rag_agent import GEMINI_MODEL
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel(GEMINI_MODEL)
-    resp = model.generate_content(
-        prompt, request_options={"timeout": GATE_TIMEOUT_SECONDS})
+    resp = model.generate_content(prompt, request_options={"timeout": timeout})
     return (resp.text or "").strip()
 
 
-def _call_groq(prompt: str) -> str:
+def _call_groq(prompt: str, timeout: float = GATE_TIMEOUT_SECONDS) -> str:
     """Raw gate reply from a Groq-hosted model. Raises on any failure."""
     import httpx
     from agents.rag_agent import GROQ_CHAT_URL, GROQ_VERIFY_MODEL
@@ -108,13 +112,13 @@ def _call_groq(prompt: str) -> str:
               "messages": [{"role": "user", "content": prompt}],
               "temperature": 0,
               "response_format": {"type": "json_object"}},
-        timeout=GATE_TIMEOUT_SECONDS)
+        timeout=timeout)
     if r.status_code != 200:
         raise RuntimeError(f"Groq HTTP {r.status_code}: {r.text[:160]}")
     return r.json()["choices"][0]["message"]["content"].strip()
 
 
-def is_live_report(text: str) -> dict:
+def is_live_report(text: str, timeout: float = GATE_TIMEOUT_SECONDS) -> dict:
     """Is this post reporting a live Klang Valley service problem?
 
     Returns {"live": bool, "why": str, "checked_by": str | None}.
@@ -134,7 +138,7 @@ def is_live_report(text: str) -> dict:
 
     for provider in order:
         try:
-            raw = callers[provider](prompt)
+            raw = callers[provider](prompt, timeout)
             if raw.startswith("```"):                 # strip markdown fences
                 raw = raw.split("```")[1]
                 if raw.startswith("json"):
@@ -157,7 +161,8 @@ def is_live_report(text: str) -> dict:
     return {"live": True, "why": "gate unavailable", "checked_by": None}
 
 
-def filter_alert(text: str, *, official: bool = False) -> dict:
+def filter_alert(text: str, *, official: bool = False,
+                 timeout: float = GATE_TIMEOUT_SECONDS) -> dict:
     """The decision the ingestion path needs, with the skip rules applied.
 
     Returns {"alert": bool, "why": str, "checked_by": str | None}, where alert
@@ -168,6 +173,6 @@ def filter_alert(text: str, *, official: bool = False) -> dict:
     if official:
         return {"alert": True, "why": "official source, not gated",
                 "checked_by": None}
-    verdict = is_live_report(text)
+    verdict = is_live_report(text, timeout=timeout)
     return {"alert": verdict["live"], "why": verdict["why"],
             "checked_by": verdict["checked_by"]}

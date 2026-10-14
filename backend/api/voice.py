@@ -26,6 +26,7 @@ from agents.nlp_agent import predict
 from agents.rerouting_agent import reroute
 from api.dashboard import (_COMMON_WORD_STATIONS, _CONDITIONAL_STATION_NAMES,
                            _STATION_NAMES, _STATION_STOP_IDS, get_line_status)
+from agents.intent_gate import VOICE_TIMEOUT_SECONDS, filter_alert
 from db.supabase_client import log_disruption
 
 router = APIRouter(prefix="/api/voice", tags=["Voice"])
@@ -475,13 +476,33 @@ def assist(request: VoiceRequest):
     # Local classifier only: the Gemini refinement costs ~9 s and this is an
     # interactive turn. It affects how the report is logged, not the route.
     nlp = predict(text, allow_remote=False)
+
+    # "I want to go to Mid Valley" is not a breakdown report, and this is the
+    # path where that mistake was first noticed. The gate asks whether the
+    # utterance reports a live problem before the report is allowed to carry
+    # weight — with a 3-second budget, because the user is waiting. Failing
+    # open on timeout means a slow gate costs nothing but the filtering.
+    #
+    # Off by default (INTENT_GATE=1).
+    gate_method = nlp.get("method")   # always 'local' here (allow_remote=False)
+    gate_alert = nlp["disruption_alert"]
+    if gate_alert:
+        gate = filter_alert(text, timeout=VOICE_TIMEOUT_SECONDS)
+        gate_alert = gate["alert"]
+        if not gate_alert:
+            gate_method = f"{gate_method or 'unknown'}+gate_filtered"
     log_disruption(
         text=text,
         sentiment=nlp["sentiment"],
         issue_type=nlp["issue_type"],
-        disruption_alert=nlp["disruption_alert"],
-        method=nlp.get("method"),   # always 'local' here (allow_remote=False)
+        disruption_alert=gate_alert,
+        method=gate_method,
     )
+    # Everything downstream — including the spoken "I have reported the
+    # problem" acknowledgement — must follow what was actually logged. Saying
+    # a problem was reported when the row carries no alert flag would be the
+    # assistant telling the user something untrue about its own behaviour.
+    nlp = {**nlp, "disruption_alert": gate_alert}
 
     ms = request.lang == "ms"
 

@@ -125,3 +125,95 @@ def test_official_otp_outage_does_not_raise_disruption_alert():
     a single official post would otherwise falsely mark the line disrupted."""
     r = predict(_OTP_POST)
     assert r["disruption_alert"] is False
+
+
+# ── Intent gate on the in-app report path ────────────────────────────────────
+# This is the path where the gate earns its place. Replaying the real log
+# showed the single false confirmation in the data was built from two IN-APP
+# reports nine minutes apart — "go to taipan from bukit jalil" (a navigation
+# request) and "got bomb at lrt bukit jalil" (a prank). At weight 1.0 each
+# that reached the 2.0 threshold and would have cut Bukit Jalil out of
+# everyone's routing.
+
+import api.nlp as nlp_api
+from api.nlp import NLPRequest, detect
+
+
+def _force_alert(monkeypatch, text="train broke down at bukit jalil"):
+    monkeypatch.setattr(nlp_api, "predict", lambda t: {
+        "sentiment": "negative", "issue_type": "breakdown",
+        "disruption_alert": True, "method": "local",
+        "sentiment_scores": {}, "issue_scores": {}})
+    logged = []
+    monkeypatch.setattr(nlp_api, "log_disruption",
+                        lambda **kw: logged.append(kw))
+    return logged
+
+
+def test_navigation_request_is_logged_without_the_alert_flag(monkeypatch):
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: '{"live": false, "why": "navigation request"}')
+    logged = _force_alert(monkeypatch)
+
+    out = detect(NLPRequest(text="go to taipan from bukit jalil"))
+    (row,) = logged
+    assert row["disruption_alert"] is False       # stops voting
+    assert row["method"].endswith("+gate_filtered")
+    assert out["disruption_alert"] is False       # ...and the caller is told
+    assert out["gate_filtered"] is True
+
+
+def test_a_real_report_is_unaffected(monkeypatch):
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: '{"live": true, "why": "stuck now"}')
+    logged = _force_alert(monkeypatch)
+
+    out = detect(NLPRequest(text="train broke down at bukit jalil, stuck here"))
+    assert logged[0]["disruption_alert"] is True
+    assert out["disruption_alert"] is True
+    assert "gate_filtered" not in out
+
+
+def test_gate_outage_keeps_the_in_app_report(monkeypatch):
+    """Fails open: both providers blocked by conftest."""
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    logged = _force_alert(monkeypatch)
+
+    out = detect(NLPRequest(text="train broke down at bukit jalil"))
+    assert logged[0]["disruption_alert"] is True
+    assert out["disruption_alert"] is True
+
+
+def test_disabled_gate_costs_no_call_on_this_path(monkeypatch):
+    import agents.intent_gate as gate
+    called = []
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: called.append(p) or '{"live": false}')
+    logged = _force_alert(monkeypatch)
+
+    detect(NLPRequest(text="train broke down at bukit jalil"))
+    assert logged[0]["disruption_alert"] is True
+    assert called == []
+
+
+def test_non_alert_reports_never_reach_the_gate(monkeypatch):
+    """Most submissions are not alerts. Spending a model call on them would
+    make every report cost one for no decision."""
+    import agents.intent_gate as gate
+    monkeypatch.setattr(gate, "INTENT_GATE", True)
+    called = []
+    monkeypatch.setattr(gate, "_call_gemini",
+                        lambda p, t=None: called.append(p) or '{"live": false}')
+    monkeypatch.setattr(nlp_api, "predict", lambda t: {
+        "sentiment": "neutral", "issue_type": "information",
+        "disruption_alert": False, "method": "local",
+        "sentiment_scores": {}, "issue_scores": {}})
+    monkeypatch.setattr(nlp_api, "log_disruption", lambda **kw: None)
+
+    detect(NLPRequest(text="what time does the lrt open"))
+    assert called == []
