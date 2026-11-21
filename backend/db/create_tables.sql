@@ -32,3 +32,27 @@ create table if not exists feedback_logs (
   rating     integer,  -- 1 = thumbs up, -1 = thumbs down
   created_at timestamptz default now()
 );
+
+-- Live-ingestion cursor. One row, id = 1.
+--
+-- This lived in backend/models/x_ingest_state.json, on the container's own
+-- disk. That worked while the instance was always-on, and breaks on a tier
+-- where the instance sleeps: the file goes with the container, so every wake
+-- starts with no cursor and no seen-id list, re-fetches the same tweets,
+-- re-classifies them, and writes duplicate rows. A redeploy did the same thing
+-- on any tier. Durable storage is the fix, and Supabase is already a hard
+-- dependency, so it costs no new infrastructure.
+--
+-- seen_ids is capped by the application (MAX_SEEN_IDS), not here.
+create table if not exists ingest_state (
+  id             integer primary key default 1,
+  newest_id      text,          -- X since_id cursor
+  seen_ids       jsonb default '[]'::jsonb,
+  last_poll      timestamptz,
+  last_result    text,
+  tweets_scanned integer default 0,
+  alerts_raised  integer default 0,
+  alerts_gated   integer default 0,
+  updated_at     timestamptz default now(),
+  constraint ingest_state_single_row check (id = 1)
+);

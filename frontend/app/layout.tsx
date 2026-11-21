@@ -5,6 +5,7 @@ import { AuthProvider } from "./providers";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import BackToTop from "@/components/BackToTop";
+import ColdStartNotice from "@/components/ColdStartNotice";
 
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 const sans = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
         <Footer />
         <BackToTop />
+        <ColdStartNotice />
       </AuthProvider>
       </body>
     </html>

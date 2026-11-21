@@ -6,7 +6,21 @@ services:
   - type: web
     name: lrt-companion-api
     runtime: python
-    plan: starter                   # always-on instance; the free tier sleeps after 15 min idle
+    # Free tier. The consequences are real and are handled, not ignored:
+    #   * the container sleeps after ~15 min idle, so the first request pays a
+    #     ~60-100 s cold start. The frontend warns about this rather than
+    #     looking broken.
+    #   * a sleeping container runs no threads, so the in-process X poller
+    #     cannot work. INGEST_TRIGGER=external moves polling to a scheduled
+    #     call on POST /api/ingest/pull (.github/workflows/ingest.yml), which
+    #     wakes the instance and polls in one step.
+    #   * the container's disk goes with it, so the ingestion cursor lives in
+    #     Supabase (table ingest_state) and the local JSON file is only a
+    #     fallback. Without that, every wake re-fetched and re-classified the
+    #     same tweets.
+    # Switch back to `starter` to get an always-on instance, and drop
+    # INGEST_TRIGGER to return to in-process polling.
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
@@ -32,6 +46,15 @@ services:
       # X polling runs ONLY here (24/7 host), not on the laptop — set the token
       # in the dashboard to enable it. Leave unset to disable polling.
       - key: X_BEARER_TOKEN
+        sync: false
+      # 'external' on a sleeping tier (see the plan comment above), or leave
+      # unset for the in-process thread on an always-on instance.
+      - key: INGEST_TRIGGER
+        value: external
+      # Shared secret the scheduled caller must send as X-Ingest-Token. Each
+      # poll spends part of a capped monthly X quota, so an open endpoint would
+      # let anyone drain it. Leave unset only for local runs.
+      - key: INGEST_TRIGGER_TOKEN
         sync: false
       # Comma-separated production frontends allowed by CORS. Fill in the Vercel
       # URL after that deploy (e.g. https://fyp-lrt.vercel.app).

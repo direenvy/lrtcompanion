@@ -29,12 +29,26 @@ from dotenv import load_dotenv
 from agents import intent_gate
 from agents.intent_gate import filter_alert
 from agents.nlp_agent import predict
-from db.supabase_client import log_disruption
+from db.supabase_client import (load_ingest_state, log_disruption,
+                                 save_ingest_state)
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 POLL_INTERVAL_MINUTES = 30          # LIVE_DATA_PLAN B1: every 20–30 min
+# Who drives the polling.
+#
+#   in-process  a daemon thread inside the API sleeps and polls. Correct only
+#               on an always-on host.
+#   external    something off-platform calls POST /api/ingest/pull. Required on
+#               a tier where the container sleeps after idle: a sleeping
+#               container runs no threads, so the in-process poller simply
+#               stops — silently, with the API still answering when woken.
+#               The external call also wakes the instance, which is why it
+#               works where a thread cannot.
+#
+# Defaults to in-process so an existing deployment keeps its behaviour.
+INGEST_TRIGGER = os.getenv("INGEST_TRIGGER", "in-process").strip().lower()
 MAX_RESULTS_PER_POLL  = 10          # keep well inside the 10k tweets/month quota
 X_SEARCH_URL = "https://api.x.com/2/tweets/search/recent"
 # NOTE: X's language codes: Indonesian/Malay tweets are labelled 'id'
@@ -91,20 +105,67 @@ _poll_thread: threading.Thread | None = None
 
 
 # ── State (survives restarts so posts are never classified twice) ─────────────
-def _load_state() -> dict:
+# Supabase first, the local JSON file second. The file was the only store while
+# the instance was always-on; on a tier where the container sleeps it goes with
+# the container, so every wake re-fetched tweets already processed — burning the
+# monthly quota and writing duplicate rows. A redeploy did the same on any tier.
+#
+# The file is still written on every save, for two reasons: it keeps ingestion
+# working through a Supabase outage, and it means a deployment with no database
+# configured behaves exactly as it did before.
+def _blank_state() -> dict:
+    return {"seen_ids": [], "newest_id": None, "last_poll": None,
+            "tweets_scanned": 0, "alerts_raised": 0, "alerts_gated": 0,
+            "last_result": None}
+
+
+def _load_file_state() -> dict:
     try:
         with STATE_PATH.open("r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"seen_ids": [], "newest_id": None, "last_poll": None,
-                "tweets_scanned": 0, "alerts_raised": 0, "last_result": None}
+        return _blank_state()
+
+
+def _load_state() -> dict:
+    remote = load_ingest_state()
+    if remote is None:
+        return _load_file_state()
+    local = _load_file_state()
+    # Whichever cursor is further ahead wins. They diverge when one store was
+    # unavailable for a while, and taking the higher id is the safe merge: a
+    # cursor that is too OLD re-processes posts, while one that is too NEW
+    # would skip posts entirely. Re-processing is wasteful; skipping loses a
+    # disruption.
+    try:
+        if local.get("newest_id") and remote.get("newest_id"):
+            if int(local["newest_id"]) > int(remote["newest_id"]):
+                remote["newest_id"] = local["newest_id"]
+        elif local.get("newest_id") and not remote.get("newest_id"):
+            remote["newest_id"] = local["newest_id"]
+    except (TypeError, ValueError):
+        pass        # a non-numeric id is not a cursor worth trusting
+    # Union the seen-ids so a post classified under either store is not
+    # classified again.
+    merged = list(dict.fromkeys((remote.get("seen_ids") or [])
+                                + (local.get("seen_ids") or [])))
+    remote["seen_ids"] = merged[-MAX_SEEN_IDS:]
+    for k in ("tweets_scanned", "alerts_raised", "alerts_gated"):
+        remote[k] = max(remote.get(k) or 0, local.get(k) or 0)
+    return remote
 
 
 def _save_state(state: dict) -> None:
     state["seen_ids"] = state["seen_ids"][-MAX_SEEN_IDS:]
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with STATE_PATH.open("w", encoding="utf-8") as f:
-        json.dump(state, f)
+    save_ingest_state(state)
+    try:
+        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with STATE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except Exception as e:
+        # On a read-only or full container this is the expected outcome, and
+        # Supabase already has the cursor. Never let it break a poll.
+        print(f"[Ingest] local state file not written ({type(e).__name__})")
 
 
 # ── Sources (pluggable: each returns a list of normalised posts) ──────────────
@@ -345,6 +406,13 @@ def start_polling() -> bool:
     global _poll_thread
     if not os.getenv("X_BEARER_TOKEN", "").strip():
         print("[Ingest] X_BEARER_TOKEN not set — live ingestion inactive.")
+        return False
+    if INGEST_TRIGGER == "external":
+        # Starting the thread anyway would be worse than not starting it: it
+        # would poll during the minutes the container happens to be awake, on
+        # a schedule nobody can predict, on top of the external calls.
+        print("[Ingest] INGEST_TRIGGER=external — polling is driven by "
+              "POST /api/ingest/pull, no in-process thread started.")
         return False
     if _poll_thread and _poll_thread.is_alive():
         return True

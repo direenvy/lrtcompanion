@@ -19,11 +19,54 @@ export function apiBase(): string {
   return "http://localhost:8000";   // SSR fallback; real calls run client-side
 }
 
+/* Cold-start signalling.
+   The backend runs on a tier that sleeps after ~15 minutes idle, so the first
+   request of a visit can take 60-100 seconds while the container wakes. With
+   no feedback that is indistinguishable from a hang, and during a demo it
+   looks like the app is broken. The interceptors below count requests in
+   flight and, once one has been waiting longer than COLD_START_HINT_MS,
+   broadcast an event the banner listens for. Nothing polls and nothing is
+   rendered until a request is actually slow, so a warm instance shows
+   nothing at all. */
+export const COLD_START_EVENT = "lrt:api-slow";
+const COLD_START_HINT_MS = 4000;
+
+let inFlight = 0;
+let hintTimer: ReturnType<typeof setTimeout> | null = null;
+
+function broadcast(slow: boolean) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(COLD_START_EVENT, { detail: { slow } }));
+}
+
+function requestStarted() {
+  inFlight += 1;
+  if (hintTimer === null) {
+    hintTimer = setTimeout(() => broadcast(true), COLD_START_HINT_MS);
+  }
+}
+
+function requestSettled() {
+  inFlight = Math.max(0, inFlight - 1);
+  if (inFlight === 0) {
+    if (hintTimer !== null) {
+      clearTimeout(hintTimer);
+      hintTimer = null;
+    }
+    broadcast(false);
+  }
+}
+
 const API = axios.create();
 API.interceptors.request.use((config) => {
   config.baseURL = apiBase();
+  requestStarted();
   return config;
 });
+API.interceptors.response.use(
+  (r) => { requestSettled(); return r; },
+  (e) => { requestSettled(); return Promise.reject(e); },
+);
 
 export const detectDisruption = (text: string) =>
   API.post("/api/nlp/detect", { text }).then((r) => r.data);

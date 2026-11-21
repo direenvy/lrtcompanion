@@ -338,3 +338,118 @@ def test_gate_counters_are_reported_separately(ingest_env, monkeypatch):
     assert status["intent_gate"] is True
     assert status["alerts_gated"] == 1
     assert status["alerts_raised"] == 0
+
+
+# ── Cursor durability ────────────────────────────────────────────────────────
+# The cursor lived in a JSON file on the container's disk. On a tier where the
+# container sleeps that file goes with it, so every wake re-fetched tweets
+# already processed — burning the monthly quota and writing duplicate rows.
+# These tests pin the behaviour that makes a sleeping host safe.
+
+def test_cursor_is_written_to_supabase(ingest_env, monkeypatch):
+    saved = []
+    monkeypatch.setattr(ia, "save_ingest_state",
+                        lambda st: saved.append(dict(st)) or True)
+    ia.run_pull()
+    assert saved and saved[-1]["newest_id"] == "1002"
+
+
+def test_cursor_survives_a_wiped_local_file(ingest_env, monkeypatch):
+    """The sleeping-container case: the file is gone, Supabase still has the
+    cursor, so the poll must not start over."""
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: {
+        "seen_ids": ["1001", "1002"], "newest_id": "1002",
+        "last_poll": None, "last_result": "ok",
+        "tweets_scanned": 7, "alerts_raised": 3, "alerts_gated": 0})
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: True)
+    monkeypatch.setattr(ia, "STATE_PATH", ia.STATE_PATH.parent / "gone.json")
+
+    summary = ia.run_pull()
+    assert summary["scanned"] == 0        # both posts already seen
+    assert summary["alerts"] == 0         # and so none reclassified
+
+
+def test_falls_back_to_the_file_when_supabase_is_unavailable(ingest_env, monkeypatch):
+    """A database outage must degrade ingestion to the old behaviour, not stop
+    it. load returning None is how the client reports that."""
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: None)
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: False)
+    ia._save_state({**ia._blank_state(), "seen_ids": ["1001"], "newest_id": "1001"})
+
+    summary = ia.run_pull()
+    assert summary["status"] == "ok"
+    assert summary["scanned"] == 1        # 1001 already seen, 1002 is new
+
+
+def test_the_further_ahead_cursor_wins(ingest_env, monkeypatch):
+    """The two stores diverge when one was unavailable for a while. Taking the
+    HIGHER id is the safe merge: too old re-processes posts, too new SKIPS
+    them, and a skipped post is a disruption nobody hears about."""
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: True)
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: {
+        **ia._blank_state(), "newest_id": "900"})
+    ia._save_state({**ia._blank_state(), "newest_id": "1500"})
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: {
+        **ia._blank_state(), "newest_id": "900"})
+
+    assert ia._load_state()["newest_id"] == "1500"
+
+
+def test_seen_ids_are_unioned_across_the_two_stores(ingest_env, monkeypatch):
+    """A post classified under either store must not be classified again."""
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: True)
+    ia._save_state({**ia._blank_state(), "seen_ids": ["1001"]})
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: {
+        **ia._blank_state(), "seen_ids": ["1002"]})
+
+    merged = ia._load_state()["seen_ids"]
+    assert set(merged) == {"1001", "1002"}
+
+
+def test_a_non_numeric_cursor_does_not_break_the_merge(ingest_env, monkeypatch):
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: True)
+    ia._save_state({**ia._blank_state(), "newest_id": "not-an-id"})
+    monkeypatch.setattr(ia, "load_ingest_state", lambda: {
+        **ia._blank_state(), "newest_id": "1200"})
+    assert ia._load_state()["newest_id"] == "1200"
+
+
+def test_an_unwritable_local_file_does_not_fail_a_poll(ingest_env, monkeypatch):
+    """A read-only or full container is the expected case, and Supabase already
+    holds the cursor."""
+    monkeypatch.setattr(ia, "save_ingest_state", lambda st: True)
+
+    def boom(*a, **k):
+        raise OSError("read-only file system")
+    monkeypatch.setattr(ia.Path, "mkdir", boom)
+    assert ia.run_pull()["status"] == "ok"
+
+
+# ── External trigger ────────────────────────────────────────────────────────
+
+def test_external_trigger_starts_no_thread(monkeypatch):
+    """A thread on a sleeping host polls at unpredictable moments on top of the
+    scheduled calls. Not starting it is the point of the setting."""
+    monkeypatch.setenv("X_BEARER_TOKEN", "test-token")
+    monkeypatch.setattr(ia, "INGEST_TRIGGER", "external")
+    started = []
+    monkeypatch.setattr(ia.threading, "Thread",
+                        lambda *a, **k: started.append(k) or (_ for _ in ()).throw(
+                            AssertionError("thread must not be created")))
+    assert ia.start_polling() is False
+    assert started == []
+
+
+def test_in_process_trigger_is_the_default():
+    """An existing always-on deployment keeps its behaviour without being
+    reconfigured."""
+    assert ia.INGEST_TRIGGER == "in-process"
+
+
+def test_the_suite_cannot_reach_supabase(monkeypatch):
+    """A guard on the guard. If the autouse fixture in conftest is ever
+    removed, the cursor tests would start making real network calls and pass
+    locally while failing anywhere else."""
+    from db.supabase_client import load_ingest_state, save_ingest_state
+    assert load_ingest_state() is None
+    assert save_ingest_state(ia._blank_state()) is False

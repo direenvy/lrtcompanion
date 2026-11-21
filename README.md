@@ -100,6 +100,8 @@ SUPABASE_URL=
 SUPABASE_KEY=
 SUPABASE_SERVICE_KEY=
 X_BEARER_TOKEN=            # optional — live X ingestion
+INGEST_TRIGGER=            # 'external' on a host that sleeps; unset = in-process thread
+INGEST_TRIGGER_TOKEN=      # shared secret for POST /api/ingest/pull; unset = open
 GROQ_API_KEY=              # optional — hosted Whisper
 WHISPER_BACKEND=groq       # groq | local | auto
 ```
@@ -175,3 +177,40 @@ scripts/          training, evaluation and preprocessing scripts
 
 See `PROJECT_OVERVIEW.md` for the full project description, requirements evidence and
 design rationale.
+
+
+## Live ingestion on a sleeping host
+
+The backend polls X for disruption chatter. By default a daemon thread inside
+the API does it, which is only correct on an always-on instance.
+
+On a tier that sleeps after idle (Render free, for one) that thread stops the
+moment the container sleeps — silently, with the API still answering once
+woken. Two things were storing state in the wrong place, and both show up only
+on such a tier:
+
+- the poll loop lived **in the process**, so no process meant no polling
+- the cursor lived in **`backend/models/x_ingest_state.json`**, on the
+  container's own disk, so every wake started with no cursor, re-fetched the
+  same tweets, re-classified them and wrote duplicate rows — which also
+  happened on a redeploy, on any tier
+
+The fix is two settings and one table:
+
+1. Create the `ingest_state` table (`backend/db/create_tables.sql`). The local
+   file is still written, as a fallback for a database outage.
+2. Set `INGEST_TRIGGER=external` so no thread is started.
+3. Set `INGEST_TRIGGER_TOKEN` to a random string, and give the same value to
+   the scheduled caller. Each poll spends part of a capped monthly quota, so
+   an open endpoint would let anyone drain it.
+4. Point a scheduler at `POST /api/ingest/pull` with that value in an
+   `X-Ingest-Token` header. `.github/workflows/ingest.yml` does this from
+   GitHub Actions; any cron service works. The call wakes the instance and
+   polls in one step.
+
+`GET /api/ingest/status` reports `trigger` and `last_poll`, so a stalled
+scheduler is distinguishable from a sleeping host rather than both looking
+like "no recent data".
+
+Note that GitHub disables scheduled workflows in a public repository after 60
+days without commits, and nothing warns you when it does.

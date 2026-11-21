@@ -53,3 +53,18 @@ def no_intent_gate_calls(monkeypatch):
         raise RuntimeError("network blocked in tests")
     monkeypatch.setattr(gate, "_call_gemini", blocked)
     monkeypatch.setattr(gate, "_call_groq", blocked)
+
+
+@pytest.fixture(autouse=True)
+def no_supabase_client(monkeypatch):
+    """Hard rule at the top of this file: the suite runs with no network.
+
+    The ingestion cursor now reads and writes Supabase, and the first version
+    of those tests made real calls — the ingestion file alone took 76 s and
+    would have failed offline. Severing the client at the source covers every
+    caller, present and future: load_ingest_state then returns None and
+    save_ingest_state returns False, which is exactly the "database
+    unavailable" path they are built to handle.
+    """
+    import db.supabase_client as sb
+    monkeypatch.setattr(sb, "_get_client", lambda: None)

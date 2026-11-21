@@ -1,0 +1,66 @@
+# Drives live X ingestion from outside the host.
+#
+# The backend used to poll from a daemon thread inside the API. That only works
+# on an always-on instance; on a tier where the container sleeps after idle
+# there is no thread to run, so ingestion stops silently while the API still
+# answers when woken. This workflow calls the poll endpoint instead, which both
+# wakes the instance and does the work.
+#
+# Setup (once):
+#   1. Repo Settings > Secrets and variables > Actions > New repository secret
+#        INGEST_URL     https://<your-service>.onrender.com/api/ingest/pull
+#        INGEST_TOKEN   the same value as INGEST_TRIGGER_TOKEN on the host
+#   2. On the host, set INGEST_TRIGGER=external so the in-process thread stays
+#      off, and INGEST_TRIGGER_TOKEN to the same secret.
+#
+# Caveat worth knowing: GitHub disables scheduled workflows in a PUBLIC repo
+# after 60 days with no commits. If this repo goes quiet, ingestion stops and
+# nothing warns you — check /api/ingest/status, or use an external cron service
+# instead. The "schedule" trigger is also best-effort; GitHub delays runs under
+# load, so treat the interval as approximate.
+name: Poll live X feed
+
+on:
+  schedule:
+    # Every 2 hours. Deliberately slower than the old 30-minute loop: each poll
+    # spends part of a capped monthly quota, and a cold wake costs ~60-100s of
+    # the free tier's monthly instance hours. 12 polls a day keeps both inside
+    # their limits while still catching same-day disruptions.
+    - cron: "17 */2 * * *"
+  workflow_dispatch:        # lets you run it by hand to test the setup
+
+concurrency:
+  # Two overlapping polls would both wake the instance and could double-fetch.
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the poll
+        env:
+          INGEST_URL: ${{ secrets.INGEST_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: |
+          if [ -z "$INGEST_URL" ]; then
+            echo "INGEST_URL secret is not set — nothing to call."
+            exit 1
+          fi
+          # --max-time 180: the first request after a sleep pays the cold start,
+          # which can take over a minute. A shorter timeout would report a
+          # failure for a poll that actually succeeded.
+          code=$(curl -sS -o response.json -w '%{http_code}' \
+                   --max-time 180 --retry 2 --retry-delay 30 \
+                   -X POST "$INGEST_URL" \
+                   -H "X-Ingest-Token: $INGEST_TOKEN")
+          echo "HTTP $code"
+          cat response.json || true
+          echo
+          # A poll that reports rate_limited or error is still a successful
+          # call — the backend handles those and says so. Only a transport or
+          # auth failure should fail the job.
+          case "$code" in
+            2*) exit 0 ;;
+            *)  echo "::error::ingest trigger failed with HTTP $code" ; exit 1 ;;
+          esac
