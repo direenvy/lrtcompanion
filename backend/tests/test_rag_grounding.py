@@ -227,3 +227,81 @@ def test_an_unusable_verdict_tries_the_other_provider(no_network, monkeypatch):
                         lambda p: '{"verdict":"partial","unsupported":"a detail"}')
     out = ra._verify_grounded("anything", CHUNKS)
     assert out["verdict"] == "partial" and out["checked_by"] == "groq"
+
+
+# ── Degrading when the model is unavailable ─────────────────────────────────
+# Found in production: an invalid Gemini key made the query-embedding call
+# raise, nothing caught it, and /api/rag/chat returned HTTP 500 for every
+# prose question. Generation was already guarded; embedding was not, and that
+# asymmetry was invisible until the key died. Fare and network-fact questions
+# kept working throughout, because they involve no model at all.
+
+import agents.rag_agent as rag
+
+
+def _no_model(monkeypatch):
+    """Every model call fails, as an invalid or revoked key makes them."""
+    def dead(*a, **k):
+        raise RuntimeError("API key not valid")
+    monkeypatch.setattr(rag.genai, "embed_content", dead)
+    monkeypatch.setattr(rag.genai, "GenerativeModel", dead)
+
+
+def test_a_dead_key_does_not_500_the_chatbot(monkeypatch):
+    _no_model(monkeypatch)
+    out = _REAL_ANSWER("What are the LRT operating hours?")
+    assert out["mode"].startswith("keyword")
+    assert out["answer"]
+
+
+def test_failed_embedding_falls_back_to_keyword_not_an_exception(monkeypatch):
+    monkeypatch.setattr(rag, "_ready", True)
+    monkeypatch.setattr(rag, "_embedding_retrieve",
+                        lambda q, k: (_ for _ in ()).throw(RuntimeError("no key")))
+    _no_model(monkeypatch)
+    out = _REAL_ANSWER("How do I claim a refund?")
+    assert out["mode"].startswith("keyword")
+
+
+def test_off_topic_questions_still_refuse_without_a_model(monkeypatch):
+    """The refusal is normally prompt-enforced and then verified. With no model
+    in the loop neither applies, so retrieval itself has to decline."""
+    _no_model(monkeypatch)
+    out = _REAL_ANSWER("What is the weather tomorrow?")
+    assert "couldn't find this" in out["answer"]
+
+
+def test_keyword_extractive_answers_say_they_are_unverified(monkeypatch):
+    """No embedding to score the match and no model to notice the passage does
+    not answer the question. Several lexical signals were measured and none
+    separate off-topic from on-topic, so the reply must not present a quote as
+    a verified answer."""
+    _no_model(monkeypatch)
+    out = _REAL_ANSWER("What are the LRT operating hours?")
+    assert "not a verified answer" in out["answer"]
+
+
+def test_the_caveat_is_not_bolted_onto_a_refusal(monkeypatch):
+    """A refusal is already honest; prefixing it would be noise."""
+    _no_model(monkeypatch)
+    out = _REAL_ANSWER("What is the weather tomorrow?")
+    assert "closest passage" not in out["answer"]
+
+
+def test_deterministic_paths_are_untouched_by_a_dead_key(monkeypatch):
+    """These are why the deployed chatbot answered anything at all while the
+    key was invalid — no model is involved in either."""
+    _no_model(monkeypatch)
+    assert _REAL_ANSWER("is KLCC wheelchair accessible?")["mode"] == "network_facts"
+    assert _REAL_ANSWER("How much from KLCC to Ampang?")["mode"] == "fare_lookup"
+
+
+def test_a_wholly_irrelevant_chunk_set_is_not_returned():
+    """_keyword_retrieve returning its top_k whatever they scored was the bug
+    behind the irrelevant answers: an empty list is a valid, meaningful
+    result."""
+    rag._load_chunks()
+    assert rag._keyword_retrieve("zzzqqq vvvxxx wwwyyy", 5) == []
+
+
+_REAL_ANSWER = rag.answer     # captured before conftest's stub fixture runs

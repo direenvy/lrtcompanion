@@ -280,13 +280,46 @@ def _keyword_retrieve(question: str, top_k: int) -> list[dict]:
     # The user's own words (station names, specific terms) weigh 3× more than
     # synonym expansions — otherwise generic fare/pass synonyms drown out a
     # "Gombak to Kajang" match.
+    # A chunk has to actually be about the question to be returned.
+    #
+    # This used to return the top_k chunks whatever they scored, including
+    # zero. That was invisible while keyword search was only a last resort
+    # behind two semantic routes — and became a real wrong answer the moment
+    # it became the ACTIVE route: "What is the capital of France?" retrieved
+    # five arbitrary chunks and the extractive path quoted one of them back,
+    # confidently and irrelevantly. With no model in the loop there is nothing
+    # else to enforce the refusal, so relevance has to be enforced here.
+    #
+    # The test is how many of the user's OWN words a chunk contains, not the
+    # weighted score: one incidental hit is what produces nonsense. "capital"
+    # appears in a sustainability report ("human capital"), so scoring alone
+    # would have passed that question.
+    #
+    # It only applies to longer questions, and the reason is measured. Asking
+    # for two matches rejected "What to do during an LRT disruption?" — two
+    # content words, a question the corpus covers and one the chat page
+    # suggests. Nothing cheaper separates it from "What is the capital of
+    # France?", which also matches one word of two.
+    #
+    # In-corpus word fraction was tried and does NOT separate the groups:
+    # real questions scored 50-100% and off-topic ones 0-100%, with "Who won
+    # the world cup in 2022?" at 100% and the genuine "Is there a bridging bus
+    # during a breakdown?" at 50%. Do not replace this with a threshold on
+    # that signal; it was tested and it overlaps. The honest handling is in
+    # answer(), which labels a keyword-extractive reply as the closest passage
+    # found rather than as a verified answer.
+    need = 2 if len(base) >= 4 else 1
     scored = []
     for chunk in _chunks:
         text = chunk.get("text", "").lower()
-        score = (3 * sum(1 for w in base if w in text)
-                 + sum(1 for w in expanded if w in text))
+        base_hits = sum(1 for w in base if w in text)
+        if base_hits < need:
+            continue
+        score = base_hits * 3 + sum(1 for w in expanded if w in text)
         scored.append((score, chunk))
     scored.sort(key=lambda x: x[0], reverse=True)
+    # An empty list is a valid, meaningful result: answer() turns it into the
+    # refusal rather than inventing something to say.
     return [c for _, c in scored[:top_k]]
 
 
@@ -564,7 +597,17 @@ def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> 
         top_k:     Number of context chunks to retrieve.
         history:   Prior turns as [{"role": "user"|"assistant", "text": "..."}]
     """
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    # The very first line of the request, so it must not be able to fail it.
+    # With GEMINI_API_KEY unset this is configure(api_key=None); the whole
+    # point of the fallbacks below is that the chatbot still answers from the
+    # documents when no model is available, and raising here would skip every
+    # one of them — including the fare and network-fact paths, which need no
+    # model at all.
+    try:
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    except Exception as e:
+        print(f"[RAG] Gemini not configured ({type(e).__name__}) — "
+              f"deterministic and keyword paths still available")
 
     # Fix typos in the bounded set of product names BEFORE anything else.
     # Retrieval survives a typo (the surrounding words still match, which is
@@ -603,15 +646,37 @@ def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> 
     # Start cache load / background embedding if not done yet (non-blocking)
     _ensure_started()
 
+    # Retrieval, with every semantic route allowed to fail down to keyword.
+    #
+    # Generation was already guarded — an exhausted quota falls through to the
+    # extractive answer below. Query EMBEDDING was not, and that asymmetry was
+    # a live 500: an invalid API key made genai.embed_content raise here,
+    # nothing caught it, and the whole chatbot returned Internal Server Error.
+    # Found in production, where fare and network-fact questions kept working
+    # (they involve no model) while every prose question failed.
+    #
+    # Keyword retrieval over the same 1,903 chunks is worse than semantic, and
+    # far better than nothing: the documents are still searched and the
+    # extractive path can still quote them.
+    top_chunks: list[dict] = []
+    mode = "keyword"
     if _ready:
-        top_chunks = _embedding_retrieve(question, top_k)   # local cache (fast path)
-        mode = "semantic"
+        try:
+            top_chunks = _embedding_retrieve(question, top_k)   # local cache (fast path)
+            mode = "semantic"
+        except Exception as e:
+            print(f"[RAG] query embedding failed ({type(e).__name__}) — "
+                  f"falling back to keyword retrieval")
     else:
-        top_chunks = _pgvector_retrieve(question, top_k)    # canonical pgvector store
-        mode = "semantic_pgvector"
-        if not top_chunks:
-            top_chunks = _keyword_retrieve(question, top_k) # offline last resort
-            mode = "keyword"
+        try:
+            top_chunks = _pgvector_retrieve(question, top_k)    # canonical pgvector store
+            mode = "semantic_pgvector"
+        except Exception as e:
+            print(f"[RAG] pgvector retrieval failed ({type(e).__name__}) — "
+                  f"falling back to keyword retrieval")
+    if not top_chunks:
+        top_chunks = _keyword_retrieve(question, top_k)         # offline last resort
+        mode = "keyword"
 
     context = "\n\n---\n\n".join(
         f"[Source: {c.get('source_file','unknown')}]\n{c['text']}"
@@ -627,7 +692,6 @@ def answer(question: str, top_k: int = 5, history: list[dict] | None = None) -> 
             turns.append(f"{role}: {turn.get('text', '')}")
         history_block = "\n\nPrevious conversation:\n" + "\n".join(turns)
 
-    model = genai.GenerativeModel(GEMINI_MODEL)
     prompt = f"""You are an AI assistant for Rapid KL / Prasarana LRT services in Malaysia.
 Answer the user's question using ONLY the context below.
 If the answer is not in the context, say "{REFUSAL}"
@@ -656,6 +720,13 @@ Answer:"""
     # already succeeded, so return an honest degraded answer that still points
     # the user at the right official documents.
     try:
+        # Constructed inside the try, not above it. With a missing or revoked
+        # key this call can raise on its own, and a failure here means exactly
+        # what a failed generation means — no model is available — so it
+        # belongs on the same path. A test caught this as the NEXT unguarded
+        # line after the embedding fix, which is the shape of the original bug
+        # repeating one line down.
+        model = genai.GenerativeModel(GEMINI_MODEL)
         response = model.generate_content(prompt, request_options={"timeout": 15})
         answer = (response.text or "").strip()
         if not answer:
@@ -668,6 +739,20 @@ Answer:"""
         print(f"[RAG] generation failed ({type(e).__name__}) — extractive fallback")
         answer = _extractive_answer(question, top_chunks)
         mode = f"{mode}_extractive"
+        # Keyword retrieval plus extractive quoting is the one route with
+        # nothing in it that can judge relevance: no embedding to score the
+        # match, no model to notice the context does not answer the question.
+        # Several lexical signals were measured and none separate an off-topic
+        # question from an on-topic one (see _keyword_retrieve). So the reply
+        # says what it is — the closest passage found — rather than presenting
+        # a quote as an answer. A short caveat is cheap; a confidently
+        # irrelevant paragraph is what loses a reader's trust in the whole
+        # system.
+        if mode.startswith("keyword") and not answer.startswith("I couldn't"):
+            answer = ("*The AI service is unavailable, so this is the closest "
+                      "passage I could find in the official documents — not a "
+                      "verified answer. Please check it reads as relevant.*\n\n"
+                      + answer)
 
     # Verify only what a model actually wrote. The extractive fallback IS the
     # source text, and the fare path returned long before this — neither can
