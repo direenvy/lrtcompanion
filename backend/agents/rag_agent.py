@@ -42,7 +42,31 @@ REFUSAL = "I don't have that information in my knowledge base."
 # yes/no judgement on text already in hand, so a short timeout is right — and
 # it fails OPEN, because a verifier outage turning every answer into a refusal
 # would be worse than the problem it guards against.
-VERIFY_TIMEOUT_SECONDS = 6
+# Measured, after finding the verifier was failing open most of the time.
+#
+# At the original 6 s, 4 of 6 checks timed out locally and production reported
+# `unchecked` on every single answer — so the claim "anything generated is
+# checked against its sources" was mostly false in practice, while the badge
+# said unverified and nobody looked.
+#
+# Latency at a 25 s ceiling, realistic 5-chunk / ~5,000-char prompt, n=8:
+#   succeeded 6/8 at 1.13, 1.33, 3.10, 5.20, 7.02, 7.21 s (median 4.15)
+#   the other 2 stalled and never returned, failing at the ceiling
+# Nothing landed between 12 s and 25 s. So 12 s captures every check that is
+# obtainable at all — 6 s would have lost the two over 7 s — and raising it
+# further only makes the user wait longer on calls that were never going to
+# answer.
+#
+# The cost is real: a verified answer can now take generation plus up to 12 s.
+# That is the price of the check actually running, and the alternative is a
+# guarantee that silently does not hold.
+VERIFY_TIMEOUT_SECONDS = float(os.getenv("VERIFY_TIMEOUT_SECONDS", "12"))
+
+# How often the check ran vs. how often it fell through to 'unchecked'. Process
+# local and reset on restart — enough to spot the failure mode above in a log,
+# not a metrics system.
+_verify_attempts = 0
+_verify_unchecked = 0
 
 # Which model judges the answer. Checking gemini-flash-lite's output with
 # gemini-flash-lite means a bias the generator has, the checker may share — and
@@ -565,6 +589,9 @@ ANSWER TO CHECK:
     order = (["groq", "gemini"] if VERIFY_PROVIDER == "groq" else ["gemini", "groq"])
     callers = {"gemini": _verify_call_gemini, "groq": _verify_call_groq}
 
+    global _verify_attempts, _verify_unchecked
+    _verify_attempts += 1
+
     for provider in order:
         try:
             raw = callers[provider](prompt)
@@ -584,7 +611,15 @@ ANSWER TO CHECK:
         except Exception as e:
             print(f"[RAG] grounding check via {provider} failed ({type(e).__name__})")
 
-    print("[RAG] no verifier available — serving unverified")
+    # Counted, not just printed. Failing open is the right behaviour and it is
+    # also the behaviour that hides itself: the answer still goes out, the
+    # badge says unverified, and nobody notices that the check stopped running.
+    # That is exactly what happened at the old 6-second timeout — production
+    # reported 'unchecked' on every answer for weeks. A running tally makes the
+    # next regression visible in the logs without needing a database query.
+    print(f"[RAG] no verifier available — serving unverified "
+          f"({_verify_unchecked + 1}/{_verify_attempts} unchecked this process)")
+    _verify_unchecked += 1
     return {"verdict": "unchecked", "unsupported": None, "checked_by": None}
 
 

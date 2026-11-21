@@ -190,3 +190,14 @@ def test_a_hoax_that_describes_an_emergency_is_kept(monkeypatch):
     monkeypatch.setattr(gate, "_call_gemini",
                         lambda p, t=None: '{"live": true, "why": "reports emergency at station"}')
     assert gate.filter_alert("got bomb at lrt bukit jalil")["alert"] is True
+
+
+def test_gate_timeouts_match_the_measured_latency():
+    """Both were 6 s and 3 s, chosen before the latency was measured. The
+    median check takes ~4 s with a tail past 7 s, so 3 s would have failed open
+    on nearly every voice utterance while appearing to be enabled, and 6 s lost
+    the tail. See the note on VERIFY_TIMEOUT_SECONDS in rag_agent."""
+    assert gate.GATE_TIMEOUT_SECONDS == 12
+    assert gate.VOICE_TIMEOUT_SECONDS == 8
+    # The voice budget still has to be the tighter one — a user is waiting.
+    assert gate.VOICE_TIMEOUT_SECONDS < gate.GATE_TIMEOUT_SECONDS

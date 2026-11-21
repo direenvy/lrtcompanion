@@ -305,3 +305,57 @@ def test_a_wholly_irrelevant_chunk_set_is_not_returned():
 
 
 _REAL_ANSWER = rag.answer     # captured before conftest's stub fixture runs
+
+
+# ── Timeouts are measured, and the failure mode is counted ──────────────────
+
+def test_verify_timeout_is_the_measured_value():
+    """6 s was failing open most of the time — production reported 'unchecked'
+    on every answer, so the claim that generated answers are checked against
+    their sources was mostly false while the badge said unverified.
+
+    Measured at a 25 s ceiling with a realistic 5-chunk prompt, n=8: six
+    succeeded between 1.13 s and 7.21 s, and the other two stalled and never
+    returned. Nothing landed between 12 s and 25 s, so 12 s captures every
+    obtainable check and raising it further only makes the user wait on calls
+    that were never going to answer.
+    """
+    assert rag.VERIFY_TIMEOUT_SECONDS == 12
+
+
+def test_timeout_is_configurable_without_a_deploy(monkeypatch):
+    monkeypatch.setenv("VERIFY_TIMEOUT_SECONDS", "20")
+    import importlib
+    reloaded = importlib.reload(rag)
+    try:
+        assert reloaded.VERIFY_TIMEOUT_SECONDS == 20
+    finally:
+        monkeypatch.delenv("VERIFY_TIMEOUT_SECONDS", raising=False)
+        importlib.reload(rag)
+
+
+def test_unchecked_results_are_counted(monkeypatch):
+    """Failing open is correct and it is also self-concealing: the answer goes
+    out, the badge says unverified, and nobody notices the check stopped
+    running. A tally makes the next regression visible in a log."""
+    monkeypatch.setattr(rag, "_verify_attempts", 0)
+    monkeypatch.setattr(rag, "_verify_unchecked", 0)
+    monkeypatch.setattr(rag, "_verify_call_gemini",
+                        lambda p: (_ for _ in ()).throw(RuntimeError("timeout")))
+    monkeypatch.setattr(rag, "_verify_call_groq",
+                        lambda p: (_ for _ in ()).throw(RuntimeError("no key")))
+
+    out = rag._verify_grounded("Some claim.", [{"text": "Unrelated source."}])
+    assert out["verdict"] == "unchecked"
+    assert rag._verify_attempts == 1
+    assert rag._verify_unchecked == 1
+
+
+def test_a_successful_check_does_not_count_as_unchecked(monkeypatch):
+    monkeypatch.setattr(rag, "_verify_attempts", 0)
+    monkeypatch.setattr(rag, "_verify_unchecked", 0)
+    monkeypatch.setattr(rag, "_verify_call_gemini",
+                        lambda p: '{"verdict": "supported", "unsupported": null}')
+    rag._verify_grounded("Some claim.", [{"text": "Some claim is in here."}])
+    assert rag._verify_attempts == 1
+    assert rag._verify_unchecked == 0

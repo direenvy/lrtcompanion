@@ -46,12 +46,23 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 INTENT_GATE = os.getenv("INTENT_GATE", "0").strip() == "1"
 GATE_PROVIDER = os.getenv("INTENT_GATE_PROVIDER", "gemini").strip().lower()
-GATE_TIMEOUT_SECONDS = 6
+# 12 s for the same measured reason as the RAG verifier: at 6 s most calls to
+# this model time out, and a gate that fails open most of the time is not a
+# gate. See the note on VERIFY_TIMEOUT_SECONDS in rag_agent for the numbers.
+GATE_TIMEOUT_SECONDS = float(os.getenv("GATE_TIMEOUT_SECONDS", "12"))
 # The voice turn is interactive — the user is waiting while it answers. The
 # Gemini classifier refinement was already removed from that path because it
 # cost ~9 s. A shorter budget keeps the gate from reintroducing the same
 # problem: if it has not answered in this long, fail open and route the user.
-VOICE_TIMEOUT_SECONDS = 3
+# 8 s, not 3. The original 3 s was chosen to protect an interactive turn, and
+# the latency measurement showed it would almost never complete — median 4.15 s
+# — so the voice gate would have failed open on nearly every utterance while
+# appearing to be enabled. 8 s covers the median and most of the spread.
+#
+# The cost falls only on turns that RAISED an alert, which are the minority,
+# and only when the gate is enabled. A turn that is genuinely a trip request
+# answers at full speed as before.
+VOICE_TIMEOUT_SECONDS = float(os.getenv("VOICE_TIMEOUT_SECONDS", "8"))
 
 PROMPT = """You are filtering social media posts for a rail disruption monitor \
 covering the Klang Valley (Kuala Lumpur) rail network: LRT Kelana Jaya, LRT \
