@@ -160,7 +160,26 @@ def _get_model():
 
 
 def warm() -> None:
-    """Load the model at startup so the first user does not pay for it."""
+    """Load the model at startup so the first user does not pay for it.
+
+    Skipped unless `local` is the backend that will actually serve requests.
+    This used to load unconditionally, which was harmless on an always-on host
+    with a GPU and wrong everywhere else: the deployed backend sets
+    WHISPER_BACKEND=groq, so local is only a fallback, yet every start paged in
+    a ~1.5 GB large-v3 download from HuggingFace that no request would ever
+    use. On a container that sleeps after idle, that is a 1.5 GB download on
+    every wake — competing for the memory and disk of a 512 MB instance, and
+    adding to a cold start the user is already being asked to wait through.
+
+    The load still happens on demand if Groq fails at request time, so the
+    fallback keeps working. One unlucky request pays ~30 s for it, which is a
+    better trade than every wake paying for weights nothing reads.
+    """
+    order = _backend_order()
+    if order[0] != "local":
+        print(f"[Transcribe] warm skipped — backend order is {order}, so the "
+              f"local model is a fallback and loads only if Groq fails.")
+        return
     _get_model()
 
 
