@@ -117,6 +117,32 @@ def log_feedback(question: str, answer: str, rating: int):
 # it. See db/create_tables.sql for the table.
 INGEST_STATE_ID = 1
 
+# PostgREST's code for "no such table". A missing table is not an outage: it
+# means the migration in db/create_tables.sql has not been run, which is a
+# one-time setup step with a one-line fix. Reporting it as a failure on every
+# poll trains the reader to ignore the line, and the next time it says
+# something that matters they will.
+_MISSING_TABLE = "PGRST205"
+_missing_table_warned = False
+
+
+def _explain_state_error(e: Exception, action: str) -> None:
+    """One actionable line for a missing table, a plain report for anything
+    else. The missing-table hint prints once per process, not once per poll."""
+    global _missing_table_warned
+    if getattr(e, "code", None) == _MISSING_TABLE:
+        if not _missing_table_warned:
+            _missing_table_warned = True
+            print("[Supabase] ingest_state table does not exist yet — the "
+                  "cursor is being kept in backend/models/x_ingest_state.json "
+                  "instead. That file is lost whenever the container restarts, "
+                  "so run the ingest_state migration in "
+                  "backend/db/create_tables.sql to make it durable. "
+                  "(Not repeated again this run.)")
+        return
+    print(f"[Supabase] ingest_state {action} failed "
+          f"({type(e).__name__}: {str(e)[:70]}) — using the local file")
+
 
 def load_ingest_state() -> dict | None:
     """The stored cursor, or None if it cannot be read."""
@@ -141,8 +167,7 @@ def load_ingest_state() -> dict | None:
             "alerts_gated": row.get("alerts_gated") or 0,
         }
     except Exception as e:
-        print(f"[Supabase] ingest_state read failed ({type(e).__name__}) — "
-              f"falling back to the local file")
+        _explain_state_error(e, "read")
         return None
 
 
@@ -166,6 +191,5 @@ def save_ingest_state(state: dict) -> bool:
         sb.table("ingest_state").upsert(row, on_conflict="id").execute()
         return True
     except Exception as e:
-        print(f"[Supabase] ingest_state write failed ({type(e).__name__}) — "
-              f"the local file still holds the cursor")
+        _explain_state_error(e, "write")
         return False
