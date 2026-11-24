@@ -56,3 +56,14 @@ create table if not exists ingest_state (
   updated_at     timestamptz default now(),
   constraint ingest_state_single_row check (id = 1)
 );
+
+-- No client should ever read or write the ingestion cursor: it is touched only
+-- by the backend, which uses the service key and bypasses RLS. The anon key is
+-- public — it ships inside the browser bundle — so without this, anyone could
+-- set newest_id far into the future (every later poll then skips real tweets)
+-- or clear seen_ids (every poll re-processes the same posts and burns the
+-- monthly X quota). The cursor is a control surface, not just data.
+--
+-- Enabled with NO policies on purpose. That denies anon and authenticated
+-- everything, which is the intended access level here.
+alter table ingest_state enable row level security;
