@@ -20,14 +20,21 @@
 # load, so treat the interval as approximate.
 name: Poll live X feed
 
+# NO SCHEDULE IN THIS REPOSITORY, deliberately.
+#
+# This is the public mirror. The scheduler runs in the private repository, and
+# two copies on the same cron would poll twice as often as intended, spending
+# double the capped monthly X quota for no extra coverage.
+#
+# The public repo is also the wrong host for it: GitHub silently disables
+# scheduled workflows in a PUBLIC repository after 60 days without commits, so
+# ingestion would stop one day with nothing to show why.
+#
+# The file is kept because it documents how polling actually works. Run it by
+# hand here only if the private repo is unavailable, and only with this repo's
+# own secrets set.
 on:
-  schedule:
-    # Every 2 hours. Deliberately slower than the old 30-minute loop: each poll
-    # spends part of a capped monthly quota, and a cold wake costs ~60-100s of
-    # the free tier's monthly instance hours. 12 polls a day keeps both inside
-    # their limits while still catching same-day disruptions.
-    - cron: "17 */2 * * *"
-  workflow_dispatch:        # lets you run it by hand to test the setup
+  workflow_dispatch:
 
 concurrency:
   # Two overlapping polls would both wake the instance and could double-fetch.
