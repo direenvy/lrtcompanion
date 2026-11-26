@@ -1,3 +1,20 @@
+# NOT A LIVE WORKFLOW. Reference copy only.
+#
+# This file sits in docs/ rather than .github/workflows/ on purpose, so GitHub
+# never registers it: it cannot run on a schedule, cannot be dispatched by
+# hand, and does not appear in the Actions tab of this repository.
+#
+# Polling is scheduled from the private repository instead. Two copies on the
+# same cron would poll twice as often as intended, spending double the capped
+# monthly X quota for no extra coverage. A public repository is also the wrong
+# host for it — GitHub silently disables scheduled workflows in a public repo
+# after 60 days without commits, so ingestion would stop one day with nothing
+# to show why.
+#
+# It is kept because it documents how live ingestion is actually driven, which
+# is worth reading alongside the code. To use it in your own fork, copy it to
+# .github/workflows/ and set the two secrets named below.
+#
 # Drives live X ingestion from outside the host.
 #
 # The backend used to poll from a daemon thread inside the API. That only works
@@ -20,21 +37,8 @@
 # load, so treat the interval as approximate.
 name: Poll live X feed
 
-# NO SCHEDULE IN THIS REPOSITORY, deliberately.
-#
-# This is the public mirror. The scheduler runs in the private repository, and
-# two copies on the same cron would poll twice as often as intended, spending
-# double the capped monthly X quota for no extra coverage.
-#
-# The public repo is also the wrong host for it: GitHub silently disables
-# scheduled workflows in a PUBLIC repository after 60 days without commits, so
-# ingestion would stop one day with nothing to show why.
-#
-# The file is kept because it documents how polling actually works. Run it by
-# hand here only if the private repo is unavailable, and only with this repo's
-# own secrets set.
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # only if copied into .github/workflows/
 
 concurrency:
   # Two overlapping polls would both wake the instance and could double-fetch.

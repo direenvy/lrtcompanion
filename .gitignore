@@ -115,3 +115,9 @@ scratchpad/
 # ── Reports / private docs (adjust if you want them public) ───────
 *.docx
 *.pdf.local
+
+# The ingest scheduler is driven from the private repo. Keeping a copy under
+# .github/workflows/ here would double-poll and double-spend the X quota, so a
+# careless file sync must not be able to resurrect it. The reference copy lives
+# in docs/ingest-workflow.example.yml.
+.github/workflows/ingest.yml
