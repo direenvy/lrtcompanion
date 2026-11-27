@@ -100,7 +100,7 @@ SUPABASE_URL=
 SUPABASE_KEY=
 SUPABASE_SERVICE_KEY=
 X_BEARER_TOKEN=            # optional — live X ingestion
-INGEST_TRIGGER=            # 'external' on a host that sleeps; unset = in-process thread
+INGEST_TRIGGER=            # 'manual' | 'external' | unset (in-process thread)
 INGEST_TRIGGER_TOKEN=      # shared secret for POST /api/ingest/pull; unset = open
 GROQ_API_KEY=              # optional — hosted Whisper
 WHISPER_BACKEND=groq       # groq | local | auto
@@ -199,18 +199,20 @@ The fix is two settings and one table:
 
 1. Create the `ingest_state` table (`backend/db/create_tables.sql`). The local
    file is still written, as a fallback for a database outage.
-2. Set `INGEST_TRIGGER=external` so no thread is started.
-3. Set `INGEST_TRIGGER_TOKEN` to a random string, and give the same value to
-   the scheduled caller. Each poll spends part of a capped monthly quota, so
-   an open endpoint would let anyone drain it.
-4. Point a scheduler at `POST /api/ingest/pull` with that value in an
-   `X-Ingest-Token` header. `.github/workflows/ingest.yml` does this from
-   GitHub Actions; any cron service works. The call wakes the instance and
-   polls in one step.
+2. Set `INGEST_TRIGGER` to say who drives polling:
+   - `manual` — nobody does. Run `python scripts/poll_now.py` when you want a
+     poll. Nothing accumulates while you are not looking, and X's recent
+     search only reaches back 7 days, so a longer gap loses those posts.
+   - `external` — a scheduler calls `POST /api/ingest/pull`. The call wakes a
+     sleeping instance and polls in one step.
+   - unset — the in-process thread, correct only on an always-on host.
+3. Set `INGEST_TRIGGER_TOKEN` to a random string. Each poll spends part of a
+   capped monthly quota, so an open endpoint would let anyone drain it.
+   `scripts/poll_now.py` reads the same value from `backend/.env` and sends it
+   as an `X-Ingest-Token` header, so the token never reaches your shell
+   history.
 
 `GET /api/ingest/status` reports `trigger` and `last_poll`, so a stalled
 scheduler is distinguishable from a sleeping host rather than both looking
 like "no recent data".
 
-Note that GitHub disables scheduled workflows in a public repository after 60
-days without commits, and nothing warns you when it does.

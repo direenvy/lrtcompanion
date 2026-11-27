@@ -11,9 +11,9 @@ services:
     #     ~60-100 s cold start. The frontend warns about this rather than
     #     looking broken.
     #   * a sleeping container runs no threads, so the in-process X poller
-    #     cannot work. INGEST_TRIGGER=external moves polling to a scheduled
-    #     call on POST /api/ingest/pull (.github/workflows/ingest.yml), which
-    #     wakes the instance and polls in one step.
+    #     cannot work. INGEST_TRIGGER=manual turns it off entirely: polls
+    #     happen only when a human runs scripts/poll_now.py. Set it to
+    #     'external' instead if you later want a scheduler to drive it.
     #   * the container's disk goes with it, so the ingestion cursor lives in
     #     Supabase (table ingest_state) and the local JSON file is only a
     #     fallback. Without that, every wake re-fetched and re-classified the
@@ -47,13 +47,15 @@ services:
       # in the dashboard to enable it. Leave unset to disable polling.
       - key: X_BEARER_TOKEN
         sync: false
-      # 'external' on a sleeping tier (see the plan comment above), or leave
-      # unset for the in-process thread on an always-on instance.
+      # 'manual'   polls only when you run scripts/poll_now.py
+      # 'external' a scheduler calls POST /api/ingest/pull
+      # unset      in-process thread, correct only on an always-on instance
       - key: INGEST_TRIGGER
-        value: external
-      # Shared secret the scheduled caller must send as X-Ingest-Token. Each
-      # poll spends part of a capped monthly X quota, so an open endpoint would
-      # let anyone drain it. Leave unset only for local runs.
+        value: manual
+      # Shared secret the caller must send as X-Ingest-Token. Each poll spends
+      # part of a capped monthly X quota, so an open endpoint would let anyone
+      # drain it — which is exactly what manual mode is meant to prevent.
+      # scripts/poll_now.py reads the same value from backend/.env.
       - key: INGEST_TRIGGER_TOKEN
         sync: false
       # Comma-separated production frontends allowed by CORS. Fill in the Vercel

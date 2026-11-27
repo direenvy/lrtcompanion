@@ -39,13 +39,18 @@ POLL_INTERVAL_MINUTES = 30          # LIVE_DATA_PLAN B1: every 20–30 min
 # Who drives the polling.
 #
 #   in-process  a daemon thread inside the API sleeps and polls. Correct only
-#               on an always-on host.
-#   external    something off-platform calls POST /api/ingest/pull. Required on
-#               a tier where the container sleeps after idle: a sleeping
-#               container runs no threads, so the in-process poller simply
-#               stops — silently, with the API still answering when woken.
-#               The external call also wakes the instance, which is why it
-#               works where a thread cannot.
+#               on an always-on host: a container that sleeps after idle runs
+#               no threads, so the poller stops silently while the API still
+#               answers once woken.
+#   external    nothing in-process; something off-platform calls
+#               POST /api/ingest/pull on a schedule. The call wakes the
+#               instance and polls in one step.
+#   manual      nothing in-process and nothing scheduled. Polls happen only
+#               when a human asks for one, through POST /api/ingest/pull or
+#               scripts/poll_now.py. Use this to keep the X quota entirely
+#               under your own control, and accept that nothing accumulates
+#               while you are not looking — X's recent search only reaches
+#               back 7 days, so a longer gap loses those posts for good.
 #
 # Defaults to in-process so an existing deployment keeps its behaviour.
 INGEST_TRIGGER = os.getenv("INGEST_TRIGGER", "in-process").strip().lower()
@@ -407,12 +412,15 @@ def start_polling() -> bool:
     if not os.getenv("X_BEARER_TOKEN", "").strip():
         print("[Ingest] X_BEARER_TOKEN not set — live ingestion inactive.")
         return False
-    if INGEST_TRIGGER == "external":
+    if INGEST_TRIGGER in ("external", "manual"):
         # Starting the thread anyway would be worse than not starting it: it
         # would poll during the minutes the container happens to be awake, on
-        # a schedule nobody can predict, on top of the external calls.
-        print("[Ingest] INGEST_TRIGGER=external — polling is driven by "
-              "POST /api/ingest/pull, no in-process thread started.")
+        # a schedule nobody can predict, on top of whatever else is calling.
+        how = ("a scheduled call to POST /api/ingest/pull"
+               if INGEST_TRIGGER == "external"
+               else "you, via POST /api/ingest/pull or scripts/poll_now.py")
+        print(f"[Ingest] INGEST_TRIGGER={INGEST_TRIGGER} — polling is driven "
+              f"by {how}; no in-process thread started.")
         return False
     if _poll_thread and _poll_thread.is_alive():
         return True

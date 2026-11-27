@@ -97,3 +97,42 @@ def test_the_missing_table_hint_does_not_suppress_other_errors(monkeypatch, caps
     out = capsys.readouterr().out
     assert "does not exist yet" in out
     assert "read failed" in out
+
+
+# ── Manual mode ─────────────────────────────────────────────────────────────
+# Nothing polls on its own: no thread, no scheduler. The X quota is capped
+# monthly, and this keeps every unit of it spent on purpose.
+
+import agents.ingestion_agent as ia
+
+
+def test_manual_mode_starts_no_thread(monkeypatch):
+    monkeypatch.setenv("X_BEARER_TOKEN", "test-token")
+    monkeypatch.setattr(ia, "INGEST_TRIGGER", "manual")
+    monkeypatch.setattr(ia, "_poll_thread", None)
+    monkeypatch.setattr(ia.threading, "Thread",
+                        lambda *a, **k: (_ for _ in ()).throw(
+                            AssertionError("manual mode must not poll on its own")))
+    assert ia.start_polling() is False
+
+
+def test_manual_mode_still_polls_when_asked(monkeypatch):
+    """The point is control, not disabling ingestion — the endpoint must still
+    work when a human calls it."""
+    monkeypatch.setattr(ing, "INGEST_TOKEN", "")
+    monkeypatch.setattr(ing, "run_pull", lambda: {"status": "ok", "scanned": 4})
+    assert ing.pull(x_ingest_token=None)["scanned"] == 4
+
+
+def test_status_distinguishes_manual_from_a_stalled_scheduler(monkeypatch):
+    """'last_poll was days ago' means something different in each mode, and
+    the dashboard cannot say so unless the backend reports which one is on."""
+    monkeypatch.setattr(ing, "get_status", lambda: {"configured": True})
+    monkeypatch.setattr(ing, "INGEST_TRIGGER", "manual")
+    assert ing.status()["trigger"] == "manual"
+
+
+def test_in_process_remains_the_default():
+    """An always-on deployment that sets nothing keeps its old behaviour."""
+    import importlib
+    assert importlib.reload(ia).INGEST_TRIGGER == "in-process"

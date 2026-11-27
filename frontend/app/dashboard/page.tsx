@@ -285,12 +285,23 @@ function LiveIngestionCard() {
   if (!st) return null;
   const live = st.configured;
 
+  /* The card used to say "polls every N min" whenever a token was present.
+     That is only true when a thread inside the API is doing the polling. In
+     manual mode nothing polls on its own, and in external mode a scheduler
+     does — claiming a cadence that nobody is keeping is the kind of small
+     dishonesty that makes a stale board look healthy. */
+  const trigger: string = st.trigger || "in-process";
+  const cadence =
+    trigger === "manual"   ? "polls only when you run one"
+    : trigger === "external" ? "polled by an external scheduler"
+    : `polls every ${st.poll_interval_minutes} min`;
+
   const items = [
     {
       label: "Feed Status",
-      value: live ? "live" : "inactive",
-      sub:   live ? `polls every ${st.poll_interval_minutes} min` : "X API token not configured",
-      color: live ? "#22c55e" : "#737373",
+      value: live ? (trigger === "manual" ? "manual" : "live") : "inactive",
+      sub:   live ? cadence : "X API token not configured",
+      color: live ? (trigger === "manual" ? "#eab308" : "#22c55e") : "#737373",
     },
     {
       label: "Tweets Scanned",
